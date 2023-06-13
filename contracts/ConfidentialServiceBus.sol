@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Oracle for Solidity v0.4.0 (ConfidentialOracle.sol)
+ Service Bus for Solidity v0.4.0 (ConfidentialServiceBus.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -16,11 +16,11 @@ pragma solidity ^0.8.9;
 
 import "./circuits/IApproverVerifier.sol";
 
-contract ConfidentialOracle {
+contract ConfidentialServiceBus {
 
     address _verifier;
     
-    // event set_value(address owner, string key, string value, uint block_time);
+    event set_value(address owner, uint key, uint value, uint block_time);
 
     mapping (address => mapping (uint256 => uint256)) private valuesMap;
 
@@ -47,7 +47,7 @@ contract ConfidentialOracle {
             requireProof(proof, input);
 
             address owner = msg.sender;
-            // emit set_value(owner, key, value, block.timestamp);
+            emit set_value(owner, input[1], input[0], block.timestamp);
             valuesMap[owner][input[1]] = input[0];
     }
 

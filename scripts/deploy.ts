@@ -58,6 +58,7 @@ const main = async () => {
   const VaultFactory = await ethers.getContractFactory("ConfidentialVault");
   const DealFactory = await ethers.getContractFactory("ConfidentialDeal");
   const OracleFactory = await ethers.getContractFactory("ConfidentialOracle");
+  const ServiceBusFactory = await ethers.getContractFactory("ConfidentialServiceBus");
   
   
   const walletContract = await WalletFactory.connect(owner).deploy();
@@ -90,6 +91,10 @@ const main = async () => {
   const oracleContract = await OracleFactory.connect(owner).deploy(hashApproverContract.address);
   console.log('Deployed OracleFactory: ', oracleContract.address);
 
+  const serviceBusContract = await ServiceBusFactory.connect(owner).deploy(hashApproverContract.address);
+  console.log('Deployed ServiceBusFactory: ', serviceBusContract.address);
+
+
   console.log('Deploying Proxy')
   const total_supply_usdc = 1_000_000_000n * 10n ** 18n;
   const total_supply_weth = 1_000_000_000n * 10n ** 18n;
@@ -105,6 +110,7 @@ const main = async () => {
   console.log("Vault: ", vaultContract.address);
   console.log("Deal: ", dealContract.address);
   console.log("Oracle: ", oracleContract.address);
+  console.log("ServiceBus: ", serviceBusContract.address);
   console.log("USDC: ", usdcContract.address);
   console.log("wETH: ", ethContract.address);
   console.log("wBTC: ", btcContract.address);
