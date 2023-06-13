@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Oracle for Solidity v0.4.0 (ConfidentialOracle.sol)
+ Oracle for Solidity v0.4.3 (ConfidentialOracle.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

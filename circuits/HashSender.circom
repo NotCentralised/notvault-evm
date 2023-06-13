@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Hash Sender Circuit v0.4.0 (HashSender.circom)
+ Hash Sender Circuit v0.4.3 (HashSender.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
