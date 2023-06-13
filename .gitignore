@@ -1,0 +1,25 @@
+node_modules
+.env
+
+circuits/output
+circuits/secret
+
+circuits/*_witness.wtns
+
+coverage
+coverage.json
+typechain
+typechain-types
+
+#Hardhat files
+cache
+artifacts 
+
+contracts/circuits/HashReceiverVerifier.sol
+contracts/circuits/HashSenderVerifier.sol
+
+tmp
+hedera-json-rpc-relay
+
+contracts.txt
+package-lock.json
