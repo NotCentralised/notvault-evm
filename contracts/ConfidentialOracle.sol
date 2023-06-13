@@ -20,8 +20,6 @@ contract ConfidentialOracle {
 
     address _verifier;
     
-    // event set_value(address owner, string key, string value, uint block_time);
-
     mapping (address => mapping (uint256 => uint256)) private valuesMap;
 
     constructor(address verifier) { _verifier = verifier; }
@@ -47,7 +45,6 @@ contract ConfidentialOracle {
             requireProof(proof, input);
 
             address owner = msg.sender;
-            // emit set_value(owner, key, value, block.timestamp);
             valuesMap[owner][input[1]] = input[0];
     }
 
