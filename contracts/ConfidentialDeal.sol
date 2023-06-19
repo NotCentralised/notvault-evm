@@ -82,6 +82,15 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         return super.tokenURI(tokenId);
     }
 
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
     ////// CUSTOM
 
     mapping (address => uint256) ownerNonce;
