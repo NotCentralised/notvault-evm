@@ -19,11 +19,14 @@ const SEPOLIA_PRIVATE_KEY: string | undefined = process.env.SEPOLIA_PRIVATE_KEY;
 const SEPOLIA_PRIVATE_KEY_0: string | undefined = process.env.SEPOLIA_PRIVATE_KEY_0;
 const SEPOLIA_PRIVATE_KEY_1: string | undefined = process.env.SEPOLIA_PRIVATE_KEY_1;
 
-
 const MAINNET_ALCHEMY_API_KEY: string | undefined = process.env.MAINNET_ALCHEMY_API_KEY;
 const MAINNET_PRIVATE_KEY: string | undefined = process.env.MAINNET_PRIVATE_KEY;
 const MAINNET_PRIVATE_KEY_0: string | undefined = process.env.MAINNET_PRIVATE_KEY_0;
 const MAINNET_PRIVATE_KEY_1: string | undefined = process.env.MAINNET_PRIVATE_KEY_1;
+
+const BASE_GOERLI_PRIVATE_KEY: string | undefined = process.env.BASE_GOERLI_PRIVATE_KEY;
+const BASE_GOERLI_PRIVATE_KEY_0: string | undefined = process.env.BASE_GOERLI_PRIVATE_KEY_0;
+const BASE_GOERLI_PRIVATE_KEY_1: string | undefined = process.env.BASE_GOERLI_PRIVATE_KEY_1;
 
 const HEDERA_TESTNET_PRIVATE_KEY: string | undefined = process.env.HEDERA_TESTNET_PRIVATE_KEY;
 const HEDERA_TESTNET_PRIVATE_KEY_0: string | undefined = process.env.HEDERA_TESTNET_PRIVATE_KEY_0;
@@ -41,6 +44,9 @@ if (!MAINNET_PRIVATE_KEY || !MAINNET_PRIVATE_KEY_0 || !MAINNET_PRIVATE_KEY_1) {
 }
 if (!HEDERA_TESTNET_PRIVATE_KEY || !HEDERA_TESTNET_PRIVATE_KEY_0 || !HEDERA_TESTNET_PRIVATE_KEY_1) {
   throw new Error("Please set your HEDERA_TESTNET_PRIVATE_KEY in a .env file");
+}
+if (!BASE_GOERLI_PRIVATE_KEY || !BASE_GOERLI_PRIVATE_KEY_0 || !BASE_GOERLI_PRIVATE_KEY_1) {
+  throw new Error("Please set your BASE_GOERLI_PRIVATE_KEY in a .env file");
 }
 
 const config: HardhatUserConfig = {
@@ -75,6 +81,10 @@ const config: HardhatUserConfig = {
     hedera_local: {
       url: `http://localhost:7546`,
       accounts: [HEDERA_TESTNET_PRIVATE_KEY, HEDERA_TESTNET_PRIVATE_KEY_0, HEDERA_TESTNET_PRIVATE_KEY_1],
+    },
+    base_goerli: {
+      url: `https://goerli.base.org`,
+      accounts: [BASE_GOERLI_PRIVATE_KEY, BASE_GOERLI_PRIVATE_KEY_0, BASE_GOERLI_PRIVATE_KEY_1],
     }
   },
   // contractSizer: {
