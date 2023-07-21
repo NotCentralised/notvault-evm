@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Send Verifier Interface for Solidity v0.4.3 (circuits/ISendVerifier.sol)
+ Send Verifier Interface for Solidity v0.4.4 (circuits/ISendVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

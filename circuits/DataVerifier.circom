@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- General Data Verification Circuit v0.4.3 (DataVerifier.circom)
+ General Data Verification Circuit v0.4.4 (DataVerifier.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

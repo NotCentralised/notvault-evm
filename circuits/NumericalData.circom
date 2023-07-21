@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Numerical Data Circuit v0.4.3 (NumericalData.circom)
+ Numerical Data Circuit v0.4.4 (NumericalData.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

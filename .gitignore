@@ -15,9 +15,6 @@ typechain-types
 cache
 artifacts 
 
-contracts/circuits/HashReceiverVerifier.sol
-contracts/circuits/HashSenderVerifier.sol
-
 tmp
 hedera-json-rpc-relay
 
