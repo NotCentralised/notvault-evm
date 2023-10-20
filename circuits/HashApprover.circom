@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Approver Oracle Circuit v0.4.4 (HashApprover.circom)
+ Approver Oracle Circuit v0.5.5 (HashApprover.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

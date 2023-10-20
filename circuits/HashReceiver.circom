@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Hash Receiver Circuit v0.4.4 (HashReceiver.circom)
+ Hash Receiver Circuit v0.5.5 (HashReceiver.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

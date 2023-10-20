@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Hash Minimum Commitment Circuit v0.4.4 (HashMinCommitment.circom)
+ Hash Minimum Commitment Circuit v0.5.5 (HashMinCommitment.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
