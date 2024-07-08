@@ -87,11 +87,11 @@ const config: HardhatUserConfig = {
       accounts: [BASE_GOERLI_PRIVATE_KEY, BASE_GOERLI_PRIVATE_KEY_0, BASE_GOERLI_PRIVATE_KEY_1],
     }
   },
-  // contractSizer: {
-  //   alphaSort: true,
-  //   runOnCompile: true,
-  //   disambiguatePaths: false,
-  // }
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
+  }
 };
 
 export default config;

@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Oracle for Solidity v0.5.5 (ConfidentialOracle.sol)
+ Oracle for Solidity v0.9.0 (ConfidentialOracle.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -19,10 +19,15 @@ import "./circuits/IApproverVerifier.sol";
 contract ConfidentialOracle {
 
     address _verifier;
+
+    address accessControl;
     
     mapping (address => mapping (uint256 => uint256)) private valuesMap;
 
-    constructor(address verifier) { _verifier = verifier; }
+    constructor(address verifier, address _accessControl) { 
+        _verifier = verifier; 
+        accessControl = _accessControl; 
+    }
 
     function getValue(
             address owner,
@@ -42,10 +47,21 @@ contract ConfidentialOracle {
         )
         public
         {
+            setValueMeta(msg.sender, proof, input);
+    }
+
+    function setValueMeta(
+            address caller,
+            bytes calldata proof,
+            uint[2] memory input
+        )
+        public
+        {
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+
             requireProof(proof, input);
 
-            address owner = msg.sender;
-            valuesMap[owner][input[1]] = input[0];
+            valuesMap[sender][input[1]] = input[0];
     }
 
     function requireProof(

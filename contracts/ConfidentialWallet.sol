@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Wallet for Solidity v0.5.5 (ConfidentialWallet.sol)
+ Confidential Wallet for Solidity v0.9.0 (ConfidentialWallet.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -15,8 +15,11 @@
 
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 import "./circuits/IReceiveVerifier.sol";
 import "./circuits/ISendVerifier.sol";
+import "./ConfidentialVault.sol";
 
 contract ConfidentialWallet {
     mapping (address => string) publicKeys;
@@ -32,7 +35,12 @@ contract ConfidentialWallet {
 
     mapping (address => mapping (string => bool)) private credentialStatus;
 
-    constructor() { }
+    mapping (address => mapping (address => mapping (address => mapping (address => string)))) private privateBalances;
+    mapping (address => mapping (address => mapping (address => mapping (uint256 => string)))) private privateAmounts;
+
+    address accessControl;
+
+    constructor(address _accessControl) { accessControl = _accessControl; }
 
     function getPublicKey(address account) public view returns (string memory) {
         return publicKeys[account];
@@ -80,8 +88,15 @@ contract ConfidentialWallet {
     function setFileIndex(
             string memory value
         ) public {
-            address account = msg.sender;
-            fileIndex[account] = value;
+            setFileIndexMeta(msg.sender, value);
+    }
+
+    function setFileIndexMeta(
+            address caller,
+            string memory value
+        ) public {
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            fileIndex[sender] = value;
     }
 
     function getCredentialIndex(
@@ -89,12 +104,19 @@ contract ConfidentialWallet {
         ) public view returns (string memory) {
             return credentialIndex[account];
     }
-    
+
     function setCredentialIndex(
             string memory value
         ) public {
-            address account = msg.sender;
-            credentialIndex[account] = value;
+            setCredentialIndexMeta(msg.sender, value);
+    }
+    
+    function setCredentialIndexMeta(
+            address caller,
+            string memory value
+        ) public {
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            credentialIndex[sender] = value;
     }
 
     function getValue(
@@ -103,13 +125,21 @@ contract ConfidentialWallet {
         ) public view returns (string memory) {
             return valueStore[account][key];
     }
-    
+
     function setValue(
             string memory key, 
             string memory value
         ) public {
-            address account = msg.sender;
-            valueStore[account][key] = value;
+            setValueMeta(msg.sender, key, value);
+    }
+    
+    function setValueMeta(
+            address caller,
+            string memory key, 
+            string memory value
+        ) public {
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            valueStore[sender][key] = value;
     }
 
     function getCredentialStatus(
@@ -123,7 +153,91 @@ contract ConfidentialWallet {
             string memory id, 
             bool status
         ) public {
-            address account = msg.sender;
-            credentialStatus[account][id] = status;
+            setCredentialStatusMeta(msg.sender, id, status);
+    }
+
+    function setCredentialStatusMeta(
+            address caller,
+            string memory id, 
+            bool status
+        ) public {
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            credentialStatus[sender][id] = status;
+    }
+
+    function privateBalanceOf(
+            address vault,
+            address account,
+            address denomination,
+            address obligor
+        ) 
+        public 
+        view 
+        returns (
+            string memory
+        ){  
+            return privateBalances[vault][account][denomination][obligor]; 
+    }
+
+    function setPrivateBalance(
+            address         vault,
+            address         denomination,
+            address         obligor,
+            string memory   value
+        ) 
+        public
+        {  
+            setPrivateBalanceMeta(msg.sender, vault, denomination, obligor, value);
+    }
+
+    function setPrivateBalanceMeta(
+            address         caller,
+            address         vault,
+            address         denomination,
+            address         obligor,
+            string memory   value
+        ) 
+        public
+        {  
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            privateBalances[vault][sender][denomination][obligor] = value;
+    }
+
+    function privateAmountOf(
+            address index,
+            address vault,
+            address account,
+            uint256 idHash
+        ) 
+        public 
+        view 
+        returns (
+            string memory
+        ){  
+            return privateAmounts[index][vault][account][idHash]; 
+    }
+
+    function setPrivateAmount(
+            address         vault,
+            address         account,
+            uint256         idHash,
+            string memory   value
+        ) 
+        public
+        {  
+            setPrivateAmountMeta(msg.sender, vault, account, idHash, value);
+    }
+
+    function setPrivateAmountMeta(
+            address         caller,
+            address         vault,
+            address         account,
+            uint256         idHash,
+            string memory   value
+        ) 
+        public
+        {  
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            privateAmounts[sender][vault][account][idHash] = value;
     }
 }

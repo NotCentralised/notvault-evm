@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- MinCommitment Interface for Solidity v0.5.5 (circuits/IMinCommitmentVerifier.sol)
+ MinCommitment Interface for Solidity v0.9.0 (circuits/IMinCommitmentVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -15,11 +15,16 @@
 
 pragma solidity ^0.8.9;
 
-interface MinCommitmentVerifier {
+interface PaymentSignatureVerifier {
     function verifyProof(
             uint[2] memory a,
             uint[2][2] memory b,
             uint[2] memory c,
-            uint[3] memory input
+            uint[2] memory input
         ) external view returns (bool r);
+
+    function requireSignatureProof(
+            bytes memory _proof,
+            uint[2] memory input
+        ) external view;
 }

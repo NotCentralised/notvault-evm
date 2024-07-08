@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- TextData Verifier Interface for Solidity v0.5.5 (circuits/ITextDataVerifier.sol)
+ TextData Verifier Interface for Solidity v0.9.0 (circuits/ITextDataVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

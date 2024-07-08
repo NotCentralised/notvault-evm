@@ -20,7 +20,7 @@ circuits="${circuits} NumericalData"
 circuits="${circuits} TextData"
 circuits="${circuits} TextExpiryData"
 circuits="${circuits} AlphaNumericalData"
-circuits="${circuits} HashMinCommitment"
+circuits="${circuits} HashPaymentSignature"
 
 # Power of Tau
 snarkjs powersoftau new bn128 $key $secret/pot${key}_0000.ptau -v

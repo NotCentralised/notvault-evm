@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Deal Contract for Solidity v0.5.5 (ConfidentialDeal.sol)
+ Deal Contract for Solidity v0.9.0 (ConfidentialDeal.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -24,30 +24,21 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./ConfidentialVault.sol";
 
-import "./circuits/IMinCommitmentVerifier.sol";
-
-struct DealMeta{
-    address owner;
-    address counterpart;
-
-    address denomination;
-
-    string name;
-    string description;
-    uint256 notional;
-    uint256 initial;
-}
+import "./circuits/IPaymentSignatureVerifier.sol";
 
 contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721Burnable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
 
     address confidentialVaultAddress;
-    address minCommitmentVerifierAddress;
+    address paymentSignatureVerifierAddress;
 
-    constructor(string memory name, string memory symbol, address vaultAddress, address verifierAddress) ERC721(name, symbol) { 
+    address accessControl;
+
+    constructor(string memory name, string memory symbol, address vaultAddress, address verifierAddress, address _accessControl) ERC721(name, symbol) { 
         confidentialVaultAddress = vaultAddress;
-        minCommitmentVerifierAddress = verifierAddress;
+        paymentSignatureVerifierAddress = verifierAddress;
+        accessControl = _accessControl;
         _tokenIdCounter.increment();
     }
 
@@ -93,52 +84,71 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
 
     ////// CUSTOM
 
+    struct DealStruct{
+        uint256 tokenId;
+        string tokenUri;
+        uint32 created;
+        uint32 cancelledOwner;
+        uint32 cancelledCounterpart;
+        uint32 accepted;
+        uint32 expiry;
+    }
+
     mapping (address => uint256) ownerNonce;
     mapping (address => uint256) counterPartNonce;
     
     mapping (address => mapping (uint256 => uint256)) ownerPoolIndex;
     mapping (address => mapping (uint256 => uint256)) counterPartPoolIndex;
 
-    mapping (uint256 => bool) accepted;
-    mapping (uint256 => uint) acceptedTime;
-    mapping (uint256 => uint) createdTime;
-    mapping (uint256 => uint256) minCommitments;
-    mapping (uint256 => uint256) idHashes;
+    mapping (uint256 => uint32) cancelledOwner;
+    mapping (uint256 => uint32) cancelledCounterpart;
+    mapping (uint256 => uint32) acceptedTime;
+    mapping (uint256 => uint32) expiryTime;
+    mapping (uint256 => uint32) createdTime;
+    mapping (uint256 => address) minter;
 
-    mapping (uint256 => address) counterparts;
-    mapping (uint256 => address) owners;
+    mapping (uint256 => uint256) dealNonce;
+    mapping (uint256 => mapping (uint256 => uint256)) sendDealIndex;
 
-    
+    mapping (uint256 => uint256) minNonce;
+    mapping (uint256 => mapping (uint256 => uint256)) minDealIndex;
 
-    function safeMint(address counterpart, uint256 minCommitment, uint256 idHash, string memory uri) public returns (uint256) {
-        address owner = msg.sender;
+    function safeMint(address counterpart, string memory uri, uint32 expiry) public returns (uint256) {
+        return safeMintMeta(msg.sender, counterpart, uri, expiry);
+    }
+    function safeMintMeta(address caller, address counterpart, string memory uri, uint32 expiry) public returns (uint256) {
+        require(expiry > block.timestamp, "expiry must be in the future");
+        address owner = msg.sender == accessControl ? caller : msg.sender;
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(owner, tokenId);
         _setTokenURI(tokenId, uri);
 
-        ownerPoolIndex[owner][ownerNonce[owner]] = tokenId;
-        ownerNonce[owner] = ownerNonce[owner] + 1;
+        uint256 idxOwner = counterPartNonce[counterpart];
+        ownerPoolIndex[owner][idxOwner] = tokenId;
+        ownerNonce[owner] = idxOwner + 1;
 
-        counterPartPoolIndex[counterpart][counterPartNonce[counterpart]] = tokenId;
-        counterPartNonce[counterpart] = counterPartNonce[counterpart] + 1;
+        uint256 idxCounterpart = counterPartNonce[counterpart];
+        counterPartPoolIndex[counterpart][idxCounterpart] = tokenId;
+        counterPartNonce[counterpart] = idxCounterpart + 1;
 
-        owners[tokenId] = owner;
-        counterparts[tokenId] = counterpart;
-        minCommitments[tokenId] = minCommitment;
-        idHashes[tokenId] = idHash;
+        minter[tokenId] = owner;
+        expiryTime[tokenId] = expiry;
 
-        createdTime[tokenId] = block.timestamp;
-
+        createdTime[tokenId] = uint32(block.timestamp);
+        
         return tokenId;
     }
 
-    struct DealStruct{
-        uint256 tokenId;
-        string tokenUri;
-        uint createdTime;
-        bool accepted;
-        uint acceptedTime;
+    function getDealByID(
+            uint256 tokenId
+        ) 
+        public view 
+        returns (
+            DealStruct memory
+        ) {
+
+        return DealStruct(tokenId, super.tokenURI(tokenId), createdTime[tokenId], cancelledOwner[tokenId], cancelledCounterpart[tokenId], acceptedTime[tokenId], expiryTime[tokenId]);
     }
 
     function getDealByOwner(
@@ -150,7 +160,8 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         ) {
         DealStruct[] memory srs = new DealStruct[](ownerNonce[owner]);
         for(uint i = 0; i < ownerNonce[owner]; i++){
-            srs[i] = DealStruct(ownerPoolIndex[owner][i], super.tokenURI(ownerPoolIndex[owner][i]), createdTime[ownerPoolIndex[owner][i]], accepted[ownerPoolIndex[owner][i]], acceptedTime[ownerPoolIndex[owner][i]]);
+            uint256 idx = ownerPoolIndex[owner][i];
+            srs[i] = DealStruct(idx, super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
         }
         return srs;
     }
@@ -164,13 +175,11 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         ) {
         DealStruct[] memory srs = new DealStruct[](counterPartNonce[counterpart]);
         for(uint i = 0; i < counterPartNonce[counterpart]; i++){
-            srs[i] = DealStruct(counterPartPoolIndex[counterpart][i], super.tokenURI(counterPartPoolIndex[counterpart][i]), createdTime[counterPartPoolIndex[counterpart][i]], accepted[counterPartPoolIndex[counterpart][i]], acceptedTime[counterPartPoolIndex[counterpart][i]]);
+            uint256 idx = counterPartPoolIndex[counterpart][i];
+            srs[i] = DealStruct(idx, super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
         }
         return srs;
     }
-
-    mapping (uint256 => uint256) dealNonce;
-    mapping (uint256 => mapping (uint256 => uint256)) sendDealIndex;
 
     function getSendRequestByDeal(
             uint256 tokenId
@@ -181,7 +190,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         ) {
             SendRequest[] memory srs = new SendRequest[](dealNonce[tokenId]);
             for(uint i = 0; i < dealNonce[tokenId]; i++){
-                srs[i] = ConfidentialVault(confidentialVaultAddress).getSendRequest(sendDealIndex[tokenId][i]);
+                srs[i] = ConfidentialVault(confidentialVaultAddress).getSendRequestByID(sendDealIndex[tokenId][i]);
             }
             return srs;
     }
@@ -192,41 +201,94 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         )
         public
         {
-            sendDealIndex[tokenId][dealNonce[tokenId]] = idHash;
-            dealNonce[tokenId] = dealNonce[tokenId] + 1;
+            addSendRequestMeta(msg.sender, tokenId, idHash);
     }
 
-    function requireMinAmountProof(
-            bytes memory _proof,
-            uint[3] memory input
-        ) internal view {
-            uint256[8] memory p = abi.decode(_proof, (uint256[8]));
-            require(
-                MinCommitmentVerifier(minCommitmentVerifierAddress).verifyProof(
-                    [p[0], p[1]],
-                    [[p[2], p[3]], [p[4], p[5]]],
-                    [p[6], p[7]],
-                    input
-            ),
-            "Invalid min amount (ZK)"
-            );
-    }
-
-    function accept(
+    function addSendRequestMeta(
+            address caller,
             uint256 tokenId,
-            bytes calldata proof,
-            uint[3] memory input
+            uint256 idHash
         )
         public
         {
-            if(!accepted[tokenId]){
-                require(msg.sender == confidentialVaultAddress, "Only the counterpart can accept");
-                requireMinAmountProof(proof, input);
-                require(input[1] == minCommitments[tokenId], "Minimum Commitments don't match");
-                require(input[2] == idHashes[tokenId], "Hashes don't match");
-
-                accepted[tokenId] = true;
-                acceptedTime[tokenId] = block.timestamp;
-            }
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            require(sender == confidentialVaultAddress, "Only the counterpart can accept");
+            uint idxNonce = dealNonce[tokenId];
+            sendDealIndex[tokenId][idxNonce] = idHash;
+            dealNonce[tokenId] = idxNonce + 1;
     }
+
+    function addPayment(
+            uint256 tokenId,
+            uint256 idHash
+        )
+        public
+        {
+            addPaymentMeta(msg.sender, tokenId, idHash);
+    }
+
+    function addPaymentMeta(
+            address caller,
+            uint256 tokenId,
+            uint256 idHash
+        )
+        public
+        {
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            require(sender == minter[tokenId], "Only the counterpart can accept");
+            uint idxNonce = minNonce[tokenId];
+            minDealIndex[tokenId][idxNonce] = idHash;
+            minNonce[tokenId] = idxNonce + 1;
+    }
+
+    function accept(uint256 tokenId)
+        public
+        {
+            acceptMeta(msg.sender, tokenId);
+    }
+
+    function acceptMeta(address caller, uint256 tokenId)
+        public
+        {
+            // address caller = msg.sender;
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+            require((sender == this.ownerOf(tokenId) || (sender == confidentialVaultAddress)), "only the minter or owner can cancel and the deal must have been accepted");
+            require(expiryTime[tokenId] > block.timestamp, "deal cannot have expired when accepting");
+            require(acceptedTime[tokenId] == 0, "deal has already been accepted");
+            
+            require(minNonce[tokenId] == dealNonce[tokenId], "nonce don't match");
+            for(uint i = 0; i < minNonce[tokenId]; i++){
+                SendRequest memory srs = ConfidentialVault(confidentialVaultAddress).getSendRequestByID(sendDealIndex[tokenId][i]);
+                require(srs.idHash == minDealIndex[tokenId][i],"Payments don't match");
+            }
+            
+            acceptedTime[tokenId] = uint32(block.timestamp);
+    }
+
+    function cancel(
+            uint256 tokenId
+        )
+        public
+        {
+            cancelMeta(msg.sender, tokenId);
+    }
+
+    function cancelMeta(
+            address caller,
+            uint256 tokenId
+        )
+        public
+        {
+            
+            address sender = msg.sender == accessControl ? caller : msg.sender;
+
+            require((sender == this.ownerOf(tokenId) || sender == minter[tokenId]) && acceptedTime[tokenId] > 0 && expiryTime[tokenId] < block.timestamp, "only the minter or owner can cancel and the deal must have been accepted");
+
+            if(sender == this.ownerOf(tokenId)) { // counterpart
+                cancelledOwner[tokenId] = uint32(block.timestamp);
+            }
+            else {
+                cancelledCounterpart[tokenId] = uint32(block.timestamp);
+            }
+    }    
 }

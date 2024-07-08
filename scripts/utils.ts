@@ -17,42 +17,49 @@ export const decryptBySecret = (data: any, secret: string) =>  JSON.parse(Crypto
 
 export const genReceiverProof = async (input: any) => {
   const createWasm = './circuits/output/HashReceiver_js/HashReceiver.wasm'; // 1.6M
-  const createWC = require('../circuits/output/HashReceiver_js/witness_calculator.js'); //9.0kb
-  const WITNESS_FILE = './circuits/output/HashReceiver_witness.wtns'; //13kb
   const createZkey = './circuits/output/HashReceiver_0001.zkey'; //222kb
 
-  const buffer = fs.readFileSync(createWasm);
-  const witnessCalculator = await createWC(buffer);
-  const buff = await witnessCalculator.calculateWTNSBin(input);
-  // The package methods read from files only, so we just shove it in /tmp/ and hope
-  // there is no parallel execution.
-  fs.writeFileSync(WITNESS_FILE, buff);
-  const { proof, publicSignals } = await snarkjs.groth16.prove(createZkey, WITNESS_FILE);
+  const { proof, publicSignals } = await makeProof(input, createWasm, createZkey);
+
   const solidityProof = proofToSolidityInput(proof);
   return {
-    solidityProof: solidityProof,
-    inputs: publicSignals,
+      proof: proof,
+      solidityProof: solidityProof,
+      inputs: publicSignals,
   }
 }
 
 export const genSenderProof = async (input: any) => {
   const createWasm = './circuits/output/HashSender_js/HashSender.wasm' // 1.6M
-  const createWC = require('../circuits/output/HashSender_js/witness_calculator.js'); //9.0kb
-  const WITNESS_FILE = './circuits/output/HashSender_witness.wtns'; //13kb
   const createZkey = './circuits/output/HashSender_0001.zkey'; //222kb
 
-  const buffer = fs.readFileSync(createWasm);
-  const witnessCalculator = await createWC(buffer);
-  const buff = await witnessCalculator.calculateWTNSBin(input);
-  // The package methods read from files only, so we just shove it in /tmp/ and hope
-  // there is no parallel execution.
-  fs.writeFileSync(WITNESS_FILE, buff);
-  const { proof, publicSignals } = await snarkjs.groth16.prove(createZkey, WITNESS_FILE);
+  const { proof, publicSignals } = await makeProof(input, createWasm, createZkey);
+
   const solidityProof = proofToSolidityInput(proof);
   return {
-    solidityProof: solidityProof,
-    inputs: publicSignals,
+      proof: proof,
+      solidityProof: solidityProof,
+      inputs: publicSignals,
   }
+}
+
+export const genMinCommittmentProof = async (input: any) => {
+  const createWasm = './circuits/output/HashMinCommitment_js/HashMinCommitment.wasm' // 1.6M
+  const createZkey = './circuits/output/HashMinCommitment_0001.zkey'; //222kb
+
+  const { proof, publicSignals } = await makeProof(input, createWasm, createZkey);
+
+  const solidityProof = proofToSolidityInput(proof);
+  return {
+      proof: proof,
+      solidityProof: solidityProof,
+      inputs: publicSignals,
+  }
+}
+
+const makeProof = async (_proofInput: any, _wasm: string, _zkey: string) : Promise<{ proof: string, publicSignals: string[]}> => {
+  const { proof, publicSignals } = await snarkjs.groth16.fullProve(_proofInput, _wasm, _zkey);
+  return { proof, publicSignals };
 }
 
 const proofToSolidityInput = (proof: any): string => {
@@ -78,7 +85,7 @@ export const encrypt = async (pk_to: string, message: any) => {
   return EthCrypto.cipher.stringify(encrypted);
 }
 export const encryptSign = async (from: any, to: any, message: any) => {
-  const hash_from = await ethers.utils.keccak256(from.address);
+  const hash_from = await ethers.utils.keccak256(from.target);
   const sig_from = await from.signMessage(ethers.utils.arrayify(hash_from));
   const pk_to = to.publicKey;
   const payload = {
@@ -121,28 +128,37 @@ const decryptSigned = async (privateKey: any, message: any) => {
   return {message: decryptedPayload, signer: senderAddress }
 }
 
-export const getPrivateBalance = async (verifierContract: any, account: any, token: any, privateKey: string) : Promise<bigint> => {
-  const privateBalance = await verifierContract.privateBalanceOf(account.address, token);
+export const getPrivateBalance = async (walletContract: any, vault: any, account: any, token: any, privateKey: string) : Promise<bigint> => {
+  // const privateBalance = await verifierContract.privateBalanceOf(account.address, token);
+  const privateBalance = await walletContract.privateBalanceOf(vault, account.address, token);
   const balance = BigInt(privateBalance == '' ? '0' : await decrypt(privateKey, privateBalance));
+
   return balance;
 }
 
-export const depositAmount = async (verifierContract: any, account: any, token:any, privateKey: string, amount: bigint) : Promise<string> => {
+export const depositAmount = async (walletContract: any, vaultContract: any, account: any, token:any, privateKey: string, amount: bigint) : Promise<void> => {
 
-  const beforeBalance = await getPrivateBalance(verifierContract, account, token, privateKey);
+  const beforeBalance = await getPrivateBalance(walletContract, vaultContract.target, account, token, privateKey);
 
   const afterBalance = BigInt(beforeBalance) + BigInt(amount);
   let privatePublicKey = EthCrypto.publicKeyByPrivateKey(privateKey);
 
   const privateAfterBalance = await encrypt(privatePublicKey, afterBalance);
   const proofReceive = await genReceiverProof({ receiverBalanceBeforeTransfer: beforeBalance, amount: amount });
-  return await verifierContract.connect(account).deposit(token, amount, privateAfterBalance, proofReceive.solidityProof, proofReceive.inputs);
+  await vaultContract.connect(account).deposit(token, amount, proofReceive.solidityProof, proofReceive.inputs);
+  await walletContract
+    .connect(account)
+    .setPrivateBalance(
+      vaultContract.target,
+      token,
+      privateAfterBalance
+  );
 }
 
-export const withdrawAmount = async (verifierContract: any, account: any, token:any, privateKey: string , amount: bigint) : Promise<string> => {
-  const senderNonce = await verifierContract.getNonce(account.address);
+export const withdrawAmount = async (walletContract: any, vaultContract: any, account: any, token:any, privateKey: string , amount: bigint) : Promise<string> => {
+  const senderNonce = await vaultContract.getNonce(account.address);
 
-  const beforeBalance = await getPrivateBalance(verifierContract, account, token, privateKey);
+  const beforeBalance = await getPrivateBalance(walletContract, vaultContract.target, account, token, privateKey);
 
   const afterBalance = BigInt(beforeBalance) - BigInt(amount);
   let privatePublicKey = EthCrypto.publicKeyByPrivateKey(privateKey);
@@ -150,17 +166,26 @@ export const withdrawAmount = async (verifierContract: any, account: any, token:
   const privateAfterBalance = await encrypt(privatePublicKey, afterBalance);
   
   const proofSend1 = await genSenderProof({ sender: account.address, senderBalanceBeforeTransfer: beforeBalance, amount: amount, nonce: senderNonce });
-  await verifierContract.connect(account).withdraw(token, amount, privateAfterBalance, proofSend1.solidityProof, proofSend1.inputs);
+  await vaultContract.connect(account).withdraw(token, amount, proofSend1.solidityProof, proofSend1.inputs);
+
+  await walletContract
+    .connect(account)
+    .setPrivateBalance(
+      vaultContract.target,
+      token,
+      privateAfterBalance
+  );
   
   return proofSend1.inputs[4];
 }
 
 export const zeroAddress = '0x0000000000000000000000000000000000000000';
 
-export const sendAmount = async (verifierContract: any, account: any, token:any, privateKey: string, counterPublicKey: string , amount: bigint) : Promise<string> => {
-  const senderNonce = await verifierContract.getNonce(account.address);
+export const sendAmount = async (walletContract: any, vaultContract: any, account: any, recipient: any, token:any, privateKey: string, counterPublicKey: string , amount: bigint) : Promise<string> => {
 
-  const beforeBalance = await getPrivateBalance(verifierContract, account, token, privateKey);
+  const senderNonce = await vaultContract.getNonce(account.address);
+
+  const beforeBalance = await getPrivateBalance(walletContract, vaultContract.target, account, token, privateKey);
 
   const afterBalance = BigInt(beforeBalance) - BigInt(amount);
   let privatePublicKey = EthCrypto.publicKeyByPrivateKey(privateKey);
@@ -177,49 +202,227 @@ export const sendAmount = async (verifierContract: any, account: any, token:any,
   const oracle_value = 0;
   const unlock_sender = 0;
   const unlock_receiver = 0;
+  const expiry = Math.floor(new Date('2024-06-16T00:00:00Z').getTime() / 1000);
 
+  const proofSend = await genSenderProof({ sender: account.address, senderBalanceBeforeTransfer: beforeBalance, amount: amount, nonce: BigInt(senderNonce) });
+  const proofAgree = await genMinCommittmentProof({ 
+    amount: amount, minAmount: amount, oracle_owner: oracle_owner, 
+    oracle_key_sender: oracle_key, oracle_value_sender: oracle_value, 
+    oracle_key_recipient: oracle_key, oracle_value_recipient: oracle_value, 
+    unlock_sender: unlock_sender, unlock_receiver: unlock_receiver,
+    expiry: expiry });
   
-
-  const proofSend = await genSenderProof({ sender: account.address, senderBalanceBeforeTransfer: beforeBalance, amount: amount, nonce: senderNonce });
-  await verifierContract
+  await vaultContract
     .connect(account)
     .createRequest([{ 
-        recipient: account.address, 
+        recipient: recipient, 
         denomination: token, 
     
         deal_address: deal_address,
         deal_id: deal_id,
+
         oracle_address: oracle_address,
         oracle_owner: oracle_owner,
-        oracle_key: oracle_key,
-        oracle_value: oracle_value,
+        oracle_key_sender: oracle_key,
+        oracle_value_sender: oracle_value,
+        oracle_key_recipient: oracle_key,
+        oracle_value_recipient: oracle_value,
+        
         unlock_sender: unlock_sender,
         unlock_receiver: unlock_receiver,
     
-        privateNewBalance: privateAfterBalance, 
-        privateSenderAmount: privateAmount_from, 
-        privateReceiverAmount: privateAmount_to,
+        // privateNewBalance: privateAfterBalance, 
+        // privateSenderAmount: privateAmount_from, 
+        // privateReceiverAmount: privateAmount_to,
     
         proof: proofSend.solidityProof, 
-        input: proofSend.inputs
+        input: proofSend.inputs,
+
+        proof_agree: proofAgree.solidityProof, 
+        input_agree: proofAgree.inputs
       }]);
   
-  return proofSend.inputs[4];
+  const idHash = proofSend.inputs[4];
+
+  await walletContract
+    .connect(account)
+    .setPrivateBalance(
+      vaultContract.target,
+      token,
+      privateAfterBalance
+  );
+  
+  await walletContract
+    .connect(account)
+    .setPrivateAmount(
+      vaultContract.target,
+      account.address,
+      idHash,
+      privateAmount_from
+  ); 
+
+  await walletContract
+    .connect(account)
+    .setPrivateAmount(
+      vaultContract.target,
+      recipient,
+      idHash,
+      privateAmount_to
+  );
+  
+  return idHash;
 }
 
-export const retreiveAmount = async (verifierContract: any, idHash: string, account: any, token: any, privateKey: string, counterPublicKey: string) => {
+export const sendToDeal = async (walletContract: any, vaultContract: any, account: any, recipient: any, token:any, privateKey: string, counterPublicKey: string , amount: bigint, dealAddress: string, dealId: bigint) : Promise<string> => {
 
-  const sendRequest = await verifierContract.getSendRequest(idHash);
-  const beforeBalance = await getPrivateBalance(verifierContract, account, token, privateKey);
+  const senderNonce = await vaultContract.getNonce(account.address);
+
+  const beforeBalance = await getPrivateBalance(walletContract, vaultContract.target, account, token, privateKey);
+
+  const afterBalance = BigInt(beforeBalance) - BigInt(amount);
+  let privatePublicKey = EthCrypto.publicKeyByPrivateKey(privateKey);
+
+  const privateAfterBalance = await encrypt(privatePublicKey, afterBalance);
+  const privateAmount_from = await encrypt(privatePublicKey, amount);
+  const privateAmount_to = await encrypt(counterPublicKey, amount);
+
+  const deal_address = dealAddress;
+  const deal_id = BigInt(dealId);
+  const oracle_address = zeroAddress;
+  const oracle_owner = zeroAddress;
+  const oracle_key = 0;
+  const oracle_value = 0;
+  const unlock_sender = 0;
+  const unlock_receiver = 0;
+  const expiry = Math.floor(new Date('2024-06-16T00:00:00Z').getTime() / 1000);
+
+  const proofSend = await genSenderProof({ sender: account.address, senderBalanceBeforeTransfer: beforeBalance, amount: amount, nonce: BigInt(senderNonce) });
+  const proofAgree = await genMinCommittmentProof({ 
+    amount: amount, minAmount: amount, oracle_owner: oracle_owner, 
+    oracle_key_sender: oracle_key, oracle_value_sender: oracle_value, 
+    oracle_key_recipient: oracle_key, oracle_value_recipient: oracle_value, 
+    unlock_sender: unlock_sender, unlock_receiver: unlock_receiver,
+    expiry: expiry });
   
-  const privateAmount = sendRequest.private_receiver_amount;
+  await vaultContract
+    .connect(account)
+    .createRequest([{ 
+        recipient: recipient, 
+        denomination: token, 
+    
+        deal_address: deal_address,
+        deal_id: deal_id,
+        
+        oracle_address: oracle_address,
+        oracle_owner: oracle_owner,
+        oracle_key_sender: oracle_key,
+        oracle_value_sender: oracle_value,
+        oracle_key_recipient: oracle_key,
+        oracle_value_recipient: oracle_value,
+        
+        unlock_sender: unlock_sender,
+        unlock_receiver: unlock_receiver,
+    
+        // privateNewBalance: privateAfterBalance, 
+        // privateSenderAmount: privateAmount_from, 
+        // privateReceiverAmount: privateAmount_to,
+    
+        proof: proofSend.solidityProof, 
+        input: proofSend.inputs,
+
+        proof_agree: proofAgree.solidityProof, 
+        input_agree: proofAgree.inputs
+      }]);
+
+  const idHash = proofSend.inputs[4];
+
+  await walletContract
+    .connect(account)
+    .setPrivateBalance(
+      vaultContract.target,
+      token,
+      privateAfterBalance
+  );
+  
+  await walletContract
+    .connect(account)
+    .setPrivateAmount(
+      vaultContract.target,
+      account.address,
+      idHash,
+      privateAmount_from
+  ); 
+
+  await walletContract
+    .connect(account)
+    .setPrivateAmount(
+      vaultContract.target,
+      recipient,
+      idHash,
+      privateAmount_to
+  );
+  
+  return idHash;
+}
+
+export const retreiveAmount = async (walletContract: any, vaultContract: any, idHash: string, source: any, account: any, token: any, privateKey: string) => {
+
+  const beforeBalance = await getPrivateBalance(walletContract, vaultContract.target, account, token, privateKey);
+  const privateAmount = await walletContract.privateAmountOf(source, vaultContract.target, account.address, idHash);
+
   const amount = BigInt(await decrypt(privateKey, privateAmount));
+
   let privatePublicKey = EthCrypto.publicKeyByPrivateKey(privateKey);
 
   const afterBalance = await encrypt(privatePublicKey, beforeBalance + amount);
 
   const proofReceive = await genReceiverProof({ receiverBalanceBeforeTransfer: beforeBalance, amount: amount });
-  return await verifierContract.connect(account).acceptRequest(idHash, afterBalance, proofReceive.solidityProof, proofReceive.inputs);
+
+  await vaultContract.connect(account).acceptRequest(idHash, proofReceive.solidityProof, proofReceive.inputs);
+  await walletContract
+    .connect(account)
+    .setPrivateBalance(
+      vaultContract.target,
+      token,
+      afterBalance
+  );
+}
+
+export const createDeal = async (vault: any, owner: any, counterpart: any, token: any) => {
+  let deal = {
+    owner: owner.address,
+    counterpart: counterpart.address,
+    denomination: token.target,
+    name: 'test',
+    description: 'test',
+    notional: 10n,
+    initial: 1n,
+    files: [],
+    oracle_address: zeroAddress,
+    oracle_owner: zeroAddress,
+    oracle_key: 0n,
+    oracle_value: 0n,
+    oracle_value_secret: 0n,
+    unlock_sender: 0,
+    unlock_receiver: 0,
+    expiry: Math.floor(new Date('2024-06-16T00:00:00Z').getTime() / 1000),
+  }
+
+  let dealPackage = JSON.stringify(deal);
+
+  let cid = '';
+
+  const proofAgree = await genMinCommittmentProof({ 
+    amount: BigInt(deal.initial), minAmount: BigInt(deal.initial), oracle_owner: deal.oracle_owner, 
+    
+    oracle_key_sender: deal.oracle_key, oracle_value_sender: deal.oracle_value, 
+    oracle_key_recipient: deal.oracle_key, oracle_value_recipient: deal.oracle_value, 
+    
+    unlock_sender: deal.unlock_sender, unlock_receiver: deal.unlock_receiver,
+    expiry: deal.expiry });
+
+  const tx = await vault.connect(owner).safeMint(counterpart.address, proofAgree.inputs[1], proofAgree.inputs[2], cid, Math.floor((new Date(2125,1,1)).getTime() / 1000));
+  await tx.wait();
 }
 
 

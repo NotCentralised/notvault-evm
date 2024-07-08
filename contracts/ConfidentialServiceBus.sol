@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Service Bus for Solidity v0.5.5 (ConfidentialServiceBus.sol)
+ Service Bus for Solidity v0.9.0 (ConfidentialServiceBus.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -24,7 +24,12 @@ contract ConfidentialServiceBus {
 
     mapping (address => mapping (uint256 => uint256)) private valuesMap;
 
-    constructor(address verifier) { _verifier = verifier; }
+    address accessControl;
+
+    constructor(address verifier, address _accessControl) { 
+        _verifier = verifier; 
+        accessControl = _accessControl; 
+    }
 
     function getValue(
             address owner,
@@ -44,11 +49,21 @@ contract ConfidentialServiceBus {
         )
         public
         {
+            setValueMeta(msg.sender, proof, input);
+    }
+
+    function setValueMeta(
+            address caller,
+            bytes calldata proof,
+            uint[2] memory input
+        )
+        public
+        {
+            address sender = msg.sender == accessControl ? caller : msg.sender;
             requireProof(proof, input);
 
-            address owner = msg.sender;
-            emit set_value(owner, input[1], input[0], block.timestamp);
-            valuesMap[owner][input[1]] = input[0];
+            emit set_value(sender, input[1], input[0], block.timestamp);
+            valuesMap[sender][input[1]] = input[0];
     }
 
     function requireProof(
