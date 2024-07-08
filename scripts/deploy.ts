@@ -13,29 +13,6 @@ const encrypt = async (pk_to: string, message: any) => {
   return EthCrypto.cipher.stringify(encrypted);
 }
 
-// API KEY
-// test1
-// Client ID: dd7e333c-8e56-4d1e-8a2c-bd041aa68696
-// Value: XtS8Q~IGq6dtczp9Xqt3KjTTLYbQuFmIFWLxpaeD
-// Secret ID: f54199ac-23ef-4a89-81af-ef4c1a152f7a
-
-
-// main
-// Client ID: b5b76856-e0b5-4093-b5cb-765ed78b48b0
-// Value: ask8Q~Nrx.EYvuxTnwyM29yG6HvGfDYcAI3JhcX6
-// Secret ID: c9b53b9b-5e9f-4648-bee7-ff9bc9182a25
-
-
-// azure-function: api-gateway
-// Client ID: dd7e333c-8e56-4d1e-8a2c-bd041aa68696
-// Secret ID: af69fda9-52fb-41c1-862c-8d4a537c2a95
-// Secret: Wsu8Q~HNK1i3AG-8h9fuHBaUvbkAZwyeZkT7IaFV
-
-// spa-auth: api-gateway
-// Client ID: 93f3fe31-4175-4953-a686-0253cf563b2e
-// Secret ID: c986e68d-e0de-4cd4-b8d5-c5996f14b835
-// Secret: zUm8Q~oSkz1wOo5mulpjGBPOwUG2ZF8JvY.KzaCc
-
 const main = async () => {
 
   let start = Date.now();
