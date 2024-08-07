@@ -13,8 +13,6 @@ const encrypt = async (pk_to: string, message: any) => {
   return EthCrypto.cipher.stringify(encrypted);
 }
 
-
-
 // Access     : Gas = 46,923
 // Wallet     : Gas = 684,633
 // Vault      : Gas = 5,439,384
@@ -123,22 +121,22 @@ const main = async () => {
   console.log('Deploying Treasury')
   const decimals = 2n;
   // const total_supply_usdc = 1_000_000_000n;// * 10n ** 2n;
-  const total_supply_usdc = 0n;// * 10n ** 2n;
-  const total_supply_weth = 1_000_000_000n;// * 10n ** 2n;
-  const total_supply_wbtc = 1_000_000_000n;// * 10n ** 2n;
+  const total_supply_usdc = 1_000_000_000n;// * 10n ** 2n;
+  const total_supply_weth = 0n;// * 10n ** 2n;
+  const total_supply_wbtc = 0n;// * 10n ** 2n;
   const TreasuryFactory = await ethers.getContractFactory("ConfidentialTreasury");
   const usdcContract = await TreasuryFactory.connect(owner).deploy("USDC", "USDC", total_supply_usdc, decimals, accessControl.target);
-  const ethContract = await TreasuryFactory.connect(owner).deploy("Wrapped ETH", "wETH", total_supply_weth, decimals, accessControl.target);
-  const btcContract = await TreasuryFactory.connect(owner).deploy("Wrapped BTC", "wBTC", total_supply_wbtc, decimals, accessControl.target);
+  const cashContract = await TreasuryFactory.connect(owner).deploy("Cash", "CASH", total_supply_weth, decimals, accessControl.target);
+  const shadowContract = await TreasuryFactory.connect(owner).deploy("Shadow", "SHADOW", total_supply_wbtc, decimals, accessControl.target);
 
   const treasurerAddress = '0x554F0168a0234ad62E4B59131BEFA1E29Ed4c6c8';
 
   console.log('Adding USDC treasurer');
   await accessControl.connect(owner).addTreasurer(treasurerAddress, usdcContract.target);
-  console.log('Adding ETH treasurer');
-  await accessControl.connect(owner).addTreasurer(treasurerAddress, ethContract.target);
-  console.log('Adding BTC treasurer');
-  await accessControl.connect(owner).addTreasurer(treasurerAddress, btcContract.target);
+  console.log('Adding CASH treasurer');
+  await accessControl.connect(owner).addTreasurer(treasurerAddress, cashContract.target);
+  console.log('Adding SHADOW treasurer');
+  await accessControl.connect(owner).addTreasurer(treasurerAddress, shadowContract.target);
   
 
   console.log('Deployed Done')
@@ -152,8 +150,8 @@ const main = async () => {
   console.log("Group: ", groupContract.target);
   console.log("ServiceBus: ", serviceBusContract.target);
   console.log("USDC: ", usdcContract.target);
-  console.log("wETH: ", ethContract.target);
-  console.log("wBTC: ", btcContract.target);
+  console.log("CASH: ", cashContract.target);
+  console.log("SHADOW: ", shadowContract.target);
   
 
   const add = '0x574D1135a10E91006eC937eFD2b29FC5B99F18a0';
