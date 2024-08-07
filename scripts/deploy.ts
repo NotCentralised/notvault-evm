@@ -13,6 +13,18 @@ const encrypt = async (pk_to: string, message: any) => {
   return EthCrypto.cipher.stringify(encrypted);
 }
 
+
+
+// Access     : Gas = 46,923
+// Wallet     : Gas = 684,633
+// Vault      : Gas = 5,439,384
+// Deal       : Gas = 5,277,448
+// Oracle     : Gas = 774,810
+// ServiceBus : Gas = 816,453
+// USDC       : Gas = 1,792,955
+// ETH        : Gas = 1,793,039
+// BTC        : Gas = 1,793,039
+
 const main = async () => {
 
   let start = Date.now();
@@ -55,6 +67,10 @@ const main = async () => {
   const textExpiryDataContract = await TextExpiryDataFactory.connect(owner).deploy();
   console.log('Deployed TextExpiryDataVerifier: ', textExpiryDataContract.target);
 
+  const PolicyFactory = await ethers.getContractFactory("contracts/circuits/PolicyVerifier.sol:Verifier");
+  const policyContract = await PolicyFactory.connect(owner).deploy();
+  console.log('Deployed PolicyVerifier: ', policyContract.target);
+
   const HashLibraryFactory = await ethers.getContractFactory("PoseidonT2");
   const hashLibraryContract = await HashLibraryFactory.connect(owner).deploy();
   console.log('Deployed HashLibraryContract: ', hashLibraryContract.target);
@@ -67,7 +83,13 @@ const main = async () => {
 
   console.log('Deploying Access Control')
   const accessControlFactory = await ethers.getContractFactory("ConfidentialAccessControl");
-  const accessControl = await accessControlFactory.connect(owner).deploy();
+  const accessControl = await accessControlFactory.connect(owner).deploy(policyContract.target);
+
+  console.log('Deploying Group')
+  const groupFactory = await ethers.getContractFactory("ConfidentialGroup");
+  const groupContract = await groupFactory.connect(owner).deploy(policyContract.target, accessControl.target);
+  console.log('Deployed GroupFactory: ', groupContract.target);
+
   
   const walletContract = await WalletFactory.connect(owner).deploy(accessControl.target);
   console.log('Deployed WalletFactory:', walletContract.target);
@@ -84,7 +106,7 @@ const main = async () => {
   await walletContract.connect(owner).registerKeys(_owner.publicKey, encryptedPrivateKey, encryptedSecret, hashedEmail, encryptedEmail);
   // await walletContract.connect(owner).registerKeys(_owner.publicKey, encryptedPrivateKey, encryptedSecret, hashedEmail, encryptedEmail, {gasLimit: 2n**20n-1n });
   
-  const vaultContract = await VaultFactory.connect(owner).deploy(hashSenderContract.target, hashReceiverContract.target, paymentSignatureContract.target, accessControl.target);
+  const vaultContract = await VaultFactory.connect(owner).deploy(hashSenderContract.target, hashReceiverContract.target, paymentSignatureContract.target, accessControl.target, groupContract.target);
   // const vaultContract = await VaultFactory.connect(owner).deploy(hashSenderContract.target, hashReceiverContract.target, {gasLimit: 2n**20n-1n });
   console.log('Deployed VaultFactory: ', vaultContract.target);
   
@@ -98,15 +120,16 @@ const main = async () => {
   const serviceBusContract = await ServiceBusFactory.connect(owner).deploy(hashApproverContract.target, accessControl.target);
   console.log('Deployed ServiceBusFactory: ', serviceBusContract.target);
 
-
   console.log('Deploying Treasury')
-  const total_supply_usdc = 1_000_000_000n * 10n ** 18n;
-  const total_supply_weth = 1_000_000_000n * 10n ** 18n;
-  const total_supply_wbtc = 1_000_000_000n * 10n ** 18n;
+  const decimals = 2n;
+  // const total_supply_usdc = 1_000_000_000n;// * 10n ** 2n;
+  const total_supply_usdc = 0n;// * 10n ** 2n;
+  const total_supply_weth = 1_000_000_000n;// * 10n ** 2n;
+  const total_supply_wbtc = 1_000_000_000n;// * 10n ** 2n;
   const TreasuryFactory = await ethers.getContractFactory("ConfidentialTreasury");
-  const usdcContract = await TreasuryFactory.connect(owner).deploy("USDC", "USDC", total_supply_usdc, accessControl.target);
-  const ethContract = await TreasuryFactory.connect(owner).deploy("Wrapped ETH", "wETH", total_supply_weth, accessControl.target);
-  const btcContract = await TreasuryFactory.connect(owner).deploy("Wrapped BTC", "wBTC", total_supply_wbtc, accessControl.target);
+  const usdcContract = await TreasuryFactory.connect(owner).deploy("USDC", "USDC", total_supply_usdc, decimals, accessControl.target);
+  const ethContract = await TreasuryFactory.connect(owner).deploy("Wrapped ETH", "wETH", total_supply_weth, decimals, accessControl.target);
+  const btcContract = await TreasuryFactory.connect(owner).deploy("Wrapped BTC", "wBTC", total_supply_wbtc, decimals, accessControl.target);
 
   const treasurerAddress = '0x554F0168a0234ad62E4B59131BEFA1E29Ed4c6c8';
 
@@ -126,6 +149,7 @@ const main = async () => {
   console.log("Vault: ", vaultContract.target);
   console.log("Deal: ", dealContract.target);
   console.log("Oracle: ", oracleContract.target);
+  console.log("Group: ", groupContract.target);
   console.log("ServiceBus: ", serviceBusContract.target);
   console.log("USDC: ", usdcContract.target);
   console.log("wETH: ", ethContract.target);
@@ -136,6 +160,9 @@ const main = async () => {
 
   // await usdcContract.connect(owner).approve(add, 10_000n);
   // await usdcContract.connect(owner).transfer(add, 10_000n);
+
+  // await usdcContract.connect(owner).approve('0xad63a911B28419939c605B46F63a1a49B54F7643', 10_000n); // TENANT
+  // await usdcContract.connect(owner).transfer('0xad63a911B28419939c605B46F63a1a49B54F7643', 10_000n); // TENANT
 
   // const tx = {
   //   to: add,

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "hardhat/console.sol";
+import "./ConfidentialVault.sol";
 
 contract ConfidentialAccessControl {
 
     address private owner;
-    constructor() { owner = msg.sender; }
+    address private policyVerifier;
+    constructor(address _policyVerifier) { owner = msg.sender; policyVerifier = _policyVerifier;}
 
     function executeMetaTransaction(
         address userAddress,
@@ -26,11 +27,8 @@ contract ConfidentialAccessControl {
 
             
             (bool success, bytes memory result) = contractAddress.call(functionSignature);
-            // require(success, "Function call not successful");
             if (!success) {
-                // If the call failed, result should contain the error message
                 if (result.length > 0) {
-                    // The easiest way to bubble the revert reason is using memory via assembly
                     assembly {
                         let returndata_size := mload(result)
                         revert(add(32, result), returndata_size)
@@ -39,8 +37,6 @@ contract ConfidentialAccessControl {
                     revert("Function call not successful and no error message returned");
                 }
             }
-    
-            // emit MetaTransactionExecuted(userAddress, msg.sender, functionSignature);
 
             return result;
     }

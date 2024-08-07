@@ -34,6 +34,8 @@ template HashPaymentSignature() {
     
     signal input unlock_sender;
     signal input unlock_receiver;
+    signal input deal_address;
+    signal input deal_group_id;
     signal input deal_id;
     
     signal output amountHash;
@@ -53,7 +55,7 @@ template HashPaymentSignature() {
     // hashMinAmount.inputs[0] <== minAmount;
     // minAmountHash <== hashMinAmount.out;
 
-    component hashId = Poseidon(12);
+    component hashId = Poseidon(14);
     hashId.inputs[0] <== denomination;
     hashId.inputs[1] <== obligor;
     hashId.inputs[2] <== amount;
@@ -65,7 +67,9 @@ template HashPaymentSignature() {
     hashId.inputs[8] <== oracle_value_recipient;
     hashId.inputs[9] <== unlock_sender;
     hashId.inputs[10] <== unlock_receiver;
-    hashId.inputs[11] <== deal_id;
+    hashId.inputs[11] <== deal_address;
+    hashId.inputs[12] <== deal_group_id;
+    hashId.inputs[13] <== deal_id;
     idHash <== hashId.out;
 }
 

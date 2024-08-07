@@ -4,6 +4,8 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "./ConfidentialAccessControl.sol";
+
 contract ConfidentialTreasury is ERC20, Ownable {
 
     address accessControl;
@@ -22,9 +24,16 @@ contract ConfidentialTreasury is ERC20, Ownable {
     // - treasurer api -> receives cash -> mint funded token (0)
     // - treasurer api -> send FIAT -> burn funded
 
-    constructor(string memory name, string memory symbol, uint256 total_supply, address _accessControl) ERC20(name, symbol) {
+    uint8 private _customDecimals;
+
+    constructor(string memory name, string memory symbol, uint256 total_supply, uint8 customDecimals, address _accessControl) ERC20(name, symbol) {
         accessControl = _accessControl;
-        _mint(msg.sender, total_supply);
+        _customDecimals = customDecimals;
+        _mint(msg.sender, total_supply * 10 ** customDecimals);
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return _customDecimals;
     }
 
     function approveMeta(
@@ -42,6 +51,7 @@ contract ConfidentialTreasury is ERC20, Ownable {
     ) public {
         // require(accessControl == msg.sender, "Only the owner can set a treasurer");
         address sender = accessControl == msg.sender ? caller : msg.sender;
+        require(ConfidentialAccessControl(accessControl).isTreasurer(sender, address(this)), "Only Treasurer can mint");
         _mint(sender, amount);
     }
 
@@ -51,6 +61,8 @@ contract ConfidentialTreasury is ERC20, Ownable {
     ) public {
         // require(accessControl == msg.sender, "Only the owner can set a treasurer");
         address sender = accessControl == msg.sender ? caller : msg.sender;
+        require(ConfidentialAccessControl(accessControl).isTreasurer(sender, address(this)), "Only Treasurer can burn");
+
         _burn(sender, amount);
     }
 }

@@ -1,1 +1,1 @@
-{"denomination":"","obligor":"", "amount": "19", "oracle_address": "1","oracle_owner": "1", "oracle_key_sender": "1", "oracle_value_sender": "1", "oracle_key_recipient": "1", "oracle_value_recipient": "1", "unlock_sender": "1", "unlock_receiver": "1", "deal_id": "1" }
+{"denomination":"","obligor":"", "amount": "19", "oracle_address": "1","oracle_owner": "1", "oracle_key_sender": "1", "oracle_value_sender": "1", "oracle_key_recipient": "1", "oracle_value_recipient": "1", "unlock_sender": "1", "unlock_receiver": "1", "deal_address": "1", "deal_group_id": "1", "deal_id": "1" }

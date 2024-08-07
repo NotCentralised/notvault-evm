@@ -23,7 +23,6 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./ConfidentialVault.sol";
-
 import "./circuits/IPaymentSignatureVerifier.sol";
 
 contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721Burnable {
@@ -86,6 +85,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
 
     struct DealStruct{
         uint256 tokenId;
+        address counterpart;
         string tokenUri;
         uint32 created;
         uint32 cancelledOwner;
@@ -105,6 +105,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
     mapping (uint256 => uint32) acceptedTime;
     mapping (uint256 => uint32) expiryTime;
     mapping (uint256 => uint32) createdTime;
+    mapping (uint256 => address) counterparts;
     mapping (uint256 => address) minter;
 
     mapping (uint256 => uint256) dealNonce;
@@ -113,9 +114,6 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
     mapping (uint256 => uint256) minNonce;
     mapping (uint256 => mapping (uint256 => uint256)) minDealIndex;
 
-    function safeMint(address counterpart, string memory uri, uint32 expiry) public returns (uint256) {
-        return safeMintMeta(msg.sender, counterpart, uri, expiry);
-    }
     function safeMintMeta(address caller, address counterpart, string memory uri, uint32 expiry) public returns (uint256) {
         require(expiry > block.timestamp, "expiry must be in the future");
         address owner = msg.sender == accessControl ? caller : msg.sender;
@@ -124,7 +122,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         _safeMint(owner, tokenId);
         _setTokenURI(tokenId, uri);
 
-        uint256 idxOwner = counterPartNonce[counterpart];
+        uint256 idxOwner = ownerNonce[owner];
         ownerPoolIndex[owner][idxOwner] = tokenId;
         ownerNonce[owner] = idxOwner + 1;
 
@@ -134,6 +132,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
 
         minter[tokenId] = owner;
         expiryTime[tokenId] = expiry;
+        counterparts[tokenId] = counterpart;
 
         createdTime[tokenId] = uint32(block.timestamp);
         
@@ -148,7 +147,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             DealStruct memory
         ) {
 
-        return DealStruct(tokenId, super.tokenURI(tokenId), createdTime[tokenId], cancelledOwner[tokenId], cancelledCounterpart[tokenId], acceptedTime[tokenId], expiryTime[tokenId]);
+        return DealStruct(tokenId, counterparts[tokenId], super.tokenURI(tokenId), createdTime[tokenId], cancelledOwner[tokenId], cancelledCounterpart[tokenId], acceptedTime[tokenId], expiryTime[tokenId]);
     }
 
     function getDealByOwner(
@@ -161,7 +160,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         DealStruct[] memory srs = new DealStruct[](ownerNonce[owner]);
         for(uint i = 0; i < ownerNonce[owner]; i++){
             uint256 idx = ownerPoolIndex[owner][i];
-            srs[i] = DealStruct(idx, super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
+            srs[i] = DealStruct(idx, counterparts[idx], super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
         }
         return srs;
     }
@@ -176,7 +175,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         DealStruct[] memory srs = new DealStruct[](counterPartNonce[counterpart]);
         for(uint i = 0; i < counterPartNonce[counterpart]; i++){
             uint256 idx = counterPartPoolIndex[counterpart][i];
-            srs[i] = DealStruct(idx, super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
+            srs[i] = DealStruct(idx, counterparts[idx], super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
         }
         return srs;
     }
@@ -195,15 +194,6 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             return srs;
     }
 
-    function addSendRequest(
-            uint256 tokenId,
-            uint256 idHash
-        )
-        public
-        {
-            addSendRequestMeta(msg.sender, tokenId, idHash);
-    }
-
     function addSendRequestMeta(
             address caller,
             uint256 tokenId,
@@ -216,15 +206,6 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             uint idxNonce = dealNonce[tokenId];
             sendDealIndex[tokenId][idxNonce] = idHash;
             dealNonce[tokenId] = idxNonce + 1;
-    }
-
-    function addPayment(
-            uint256 tokenId,
-            uint256 idHash
-        )
-        public
-        {
-            addPaymentMeta(msg.sender, tokenId, idHash);
     }
 
     function addPaymentMeta(
@@ -241,18 +222,11 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             minNonce[tokenId] = idxNonce + 1;
     }
 
-    function accept(uint256 tokenId)
-        public
-        {
-            acceptMeta(msg.sender, tokenId);
-    }
-
     function acceptMeta(address caller, uint256 tokenId)
         public
         {
-            // address caller = msg.sender;
             address sender = msg.sender == accessControl ? caller : msg.sender;
-            require((sender == this.ownerOf(tokenId) || (sender == confidentialVaultAddress)), "only the minter or owner can cancel and the deal must have been accepted");
+            require(((sender == confidentialVaultAddress) || (sender == counterparts[tokenId])), "only the minter or owner can accept");
             require(expiryTime[tokenId] > block.timestamp, "deal cannot have expired when accepting");
             require(acceptedTime[tokenId] == 0, "deal has already been accepted");
             
@@ -265,14 +239,6 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             acceptedTime[tokenId] = uint32(block.timestamp);
     }
 
-    function cancel(
-            uint256 tokenId
-        )
-        public
-        {
-            cancelMeta(msg.sender, tokenId);
-    }
-
     function cancelMeta(
             address caller,
             uint256 tokenId
@@ -282,8 +248,11 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             
             address sender = msg.sender == accessControl ? caller : msg.sender;
 
-            require((sender == this.ownerOf(tokenId) || sender == minter[tokenId]) && acceptedTime[tokenId] > 0 && expiryTime[tokenId] < block.timestamp, "only the minter or owner can cancel and the deal must have been accepted");
-
+            require((sender == this.ownerOf(tokenId) || (sender == counterparts[tokenId]) || sender == minter[tokenId]), "only the minter or owner can cancel");
+            require(expiryTime[tokenId] > block.timestamp, "deal cannot have expired when accepting");
+            require(acceptedTime[tokenId] == 0, "deal has already been accepted");
+            
+            
             if(sender == this.ownerOf(tokenId)) { // counterpart
                 cancelledOwner[tokenId] = uint32(block.timestamp);
             }
