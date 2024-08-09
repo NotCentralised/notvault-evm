@@ -23,6 +23,30 @@ const encrypt = async (pk_to: string, message: any) => {
 // ETH        : Gas = 1,793,039
 // BTC        : Gas = 1,793,039
 
+
+// API KEY
+// test1
+// Client ID: dd7e333c-8e56-4d1e-8a2c-bd041aa68696
+// Value: XtS8Q~IGq6dtczp9Xqt3KjTTLYbQuFmIFWLxpaeD
+// Secret ID: f54199ac-23ef-4a89-81af-ef4c1a152f7a
+
+
+// main
+// Client ID: b5b76856-e0b5-4093-b5cb-765ed78b48b0
+// Value: ask8Q~Nrx.EYvuxTnwyM29yG6HvGfDYcAI3JhcX6
+// Secret ID: c9b53b9b-5e9f-4648-bee7-ff9bc9182a25
+
+
+// azure-function: api-gateway
+// Client ID: dd7e333c-8e56-4d1e-8a2c-bd041aa68696
+// Secret ID: af69fda9-52fb-41c1-862c-8d4a537c2a95
+// Secret: Wsu8Q~HNK1i3AG-8h9fuHBaUvbkAZwyeZkT7IaFV
+
+// spa-auth: api-gateway
+// Client ID: 93f3fe31-4175-4953-a686-0253cf563b2e
+// Secret ID: c986e68d-e0de-4cd4-b8d5-c5996f14b835
+// Secret: zUm8Q~oSkz1wOo5mulpjGBPOwUG2ZF8JvY.KzaCc
+
 const main = async () => {
 
   let start = Date.now();
@@ -125,9 +149,9 @@ const main = async () => {
   const total_supply_weth = 0n;// * 10n ** 2n;
   const total_supply_wbtc = 0n;// * 10n ** 2n;
   const TreasuryFactory = await ethers.getContractFactory("ConfidentialTreasury");
-  const usdcContract = await TreasuryFactory.connect(owner).deploy("USDC", "USDC", total_supply_usdc, decimals, accessControl.target);
-  const cashContract = await TreasuryFactory.connect(owner).deploy("Cash", "CASH", total_supply_weth, decimals, accessControl.target);
-  const shadowContract = await TreasuryFactory.connect(owner).deploy("Shadow", "SHADOW", total_supply_wbtc, decimals, accessControl.target);
+  const usdcContract = await TreasuryFactory.connect(owner).deploy("Layer-C USDC", "LCUSDC", total_supply_usdc, decimals, accessControl.target);
+  const cashContract = await TreasuryFactory.connect(owner).deploy("Layer-C Cash", "LCC", total_supply_weth, decimals, accessControl.target);
+  const shadowContract = await TreasuryFactory.connect(owner).deploy("Layer-C Shadow", "LCS", total_supply_wbtc, decimals, accessControl.target);
 
   const treasurerAddress = '0x554F0168a0234ad62E4B59131BEFA1E29Ed4c6c8';
 
@@ -154,7 +178,7 @@ const main = async () => {
   console.log("SHADOW: ", shadowContract.target);
   
 
-  const add = '0x574D1135a10E91006eC937eFD2b29FC5B99F18a0';
+  // const add = '0x574D1135a10E91006eC937eFD2b29FC5B99F18a0';
 
   // await usdcContract.connect(owner).approve(add, 10_000n);
   // await usdcContract.connect(owner).transfer(add, 10_000n);

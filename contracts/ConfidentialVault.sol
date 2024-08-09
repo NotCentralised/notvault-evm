@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.569 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.669 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -27,7 +27,7 @@ import "./ConfidentialOracle.sol";
 import "./ConfidentialAccessControl.sol";
 import "./utils/PoseidonT2.sol";
 
-import "./circuits/IPaymentSignatureVerifier.sol";
+// import "./circuits/IPaymentSignatureVerifier.sol";
 
 struct CreateRequestMessage{
     address denomination;
@@ -47,8 +47,8 @@ struct CreateRequestMessage{
     bytes   proof_send;
     uint[5] input_send;
 
-    bytes   proof_signature;
-    uint[2] input_signature;
+    // bytes   proof_signature;
+    // uint[2] input_signature;
 }
 
 struct SendRequest{
@@ -211,7 +211,7 @@ contract ConfidentialVault {
         public
         {
             address sender  = accessControl == msg.sender ? caller : msg.sender;
-            
+
             if(group_id > 0){
                 require(group == msg.sender, "only group can call");
                 sender = caller;
@@ -225,12 +225,13 @@ contract ConfidentialVault {
 
                 require(cri.input_send[3] == send_nonce, "Nonce don't match");
                 require(_hashBalances[sender][group_id][denomination][cri.obligor] == input_send[0], "initial balances don't match");
-                require(cri.input_signature[0] == cri.input_send[2], "deal amounts don't match");
+                // require(cri.input_signature[0] == cri.input_send[2], "deal amounts don't match");
                 
                 SendVerifier(sendVerifier).requireSenderProof(cri.proof_send, input_send);                
-                PaymentSignatureVerifier(paymentSignatureVerifierAddress).requireSignatureProof(cri.proof_signature, cri.input_signature);
+                // PaymentSignatureVerifier(paymentSignatureVerifierAddress).requireSignatureProof(cri.proof_signature, cri.input_signature);
 
-                uint256 idHash = cri.input_signature[1];
+                // uint256 idHash = cri.input_signature[1];
+                uint256 idHash = cri.input_send[4];
 
                 sendPool[idHash] = SendRequest(
                     idHash, sender, group_id,
@@ -249,7 +250,8 @@ contract ConfidentialVault {
 
                 if(deal_id != 0){
                     require(ConfidentialDeal(deal_address).getDealByID(deal_id).expiry > block.timestamp, "deal cannot have expired when making a payment");
-                    ConfidentialDeal(deal_address).addSendRequestMeta(sender, deal_id, cri.input_signature[1]);
+                    // ConfidentialDeal(deal_address).addSendRequestMeta(sender, deal_id, cri.input_signature[1]);
+                    ConfidentialDeal(deal_address).addSendRequestMeta(sender, deal_id, cri.input_send[4]);
                 }
 
                 uint256 receive_nonce = receiveNonce[deal_address][deal_group_id][deal_id];
@@ -297,14 +299,21 @@ contract ConfidentialVault {
                 )
             , "You are not the owner");
 
-            if(receiver == sr.sender)
+            
+            if(receiver == sr.sender){
                 require(sr.unlock_sender < block.timestamp, "sender unlock time is in the future");
                 if(sr.oracle_address != address(0)){
                     uint oracle_value = ConfidentialOracle(sr.oracle_address).getValue(sr.oracle_owner, sr.oracle_key_sender);
                     require(sr.oracle_value_sender == oracle_value, "oracle sender values don't match");
                 }
+            }
             else{
                 require(sr.unlock_receiver < block.timestamp, "recipient unlock time is in the future");
+
+                if(sr.deal_id > 0){
+                    require(ConfidentialDeal(sr.deal_address).getDealByID(sr.deal_id).accepted > 0, "deal must be accepted first");
+                }
+
                 if(sr.oracle_address != address(0)){
                     uint oracle_value = ConfidentialOracle(sr.oracle_address).getValue(sr.oracle_owner, sr.oracle_key_recipient);
                     require(sr.oracle_value_recipient == oracle_value, "oracle recipient values don't match");

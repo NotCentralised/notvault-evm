@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Deal Contract for Solidity v0.9.569 (ConfidentialDeal.sol)
+ Deal Contract for Solidity v0.9.669 (ConfidentialDeal.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -250,8 +250,6 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
 
             require((sender == this.ownerOf(tokenId) || (sender == counterparts[tokenId]) || sender == minter[tokenId]), "only the minter or owner can cancel");
             require(expiryTime[tokenId] > block.timestamp, "deal cannot have expired when accepting");
-            require(acceptedTime[tokenId] == 0, "deal has already been accepted");
-            
             
             if(sender == this.ownerOf(tokenId)) { // counterpart
                 cancelledOwner[tokenId] = uint32(block.timestamp);
