@@ -153,7 +153,8 @@ const main = async () => {
   const cashContract = await TreasuryFactory.connect(owner).deploy("Layer-C Cash", "LCC", total_supply_weth, decimals, accessControl.target);
   const shadowContract = await TreasuryFactory.connect(owner).deploy("Layer-C Shadow", "LCS", total_supply_wbtc, decimals, accessControl.target);
 
-  const treasurerAddress = '0x554F0168a0234ad62E4B59131BEFA1E29Ed4c6c8';
+  // const treasurerAddress = '0x554F0168a0234ad62E4B59131BEFA1E29Ed4c6c8';
+  const treasurerAddress = '0x04042Cda624b96051BEFA77dEC268F368461AAbb';
 
   console.log('Adding USDC treasurer');
   await accessControl.connect(owner).addTreasurer(treasurerAddress, usdcContract.target);

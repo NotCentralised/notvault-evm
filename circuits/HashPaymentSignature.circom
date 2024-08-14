@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Hash Payment Signature Circuit v0.9.669 (HashPaymentSignature.circom)
+ Hash Payment Signature Circuit v0.9.869 (HashPaymentSignature.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -24,16 +24,18 @@ template HashPaymentSignature() {
     signal input denomination;
     signal input obligor;
     signal input amount;  
-    signal input oracle_address;
-    signal input oracle_owner;
+    signal input count;
+    // signal input oracle_address;
+    // signal input oracle_owner;
     
-    signal input oracle_key_sender;
-    signal input oracle_value_sender;
-    signal input oracle_key_recipient;
-    signal input oracle_value_recipient;
+    // signal input oracle_key_sender;
+    // signal input oracle_value_sender;
+    // signal input oracle_key_recipient;
+    // signal input oracle_value_recipient;
     
-    signal input unlock_sender;
-    signal input unlock_receiver;
+    // signal input unlock_sender;
+    // signal input unlock_receiver;
+
     signal input deal_address;
     signal input deal_group_id;
     signal input deal_id;
@@ -55,21 +57,22 @@ template HashPaymentSignature() {
     // hashMinAmount.inputs[0] <== minAmount;
     // minAmountHash <== hashMinAmount.out;
 
-    component hashId = Poseidon(14);
+    component hashId = Poseidon(7);
     hashId.inputs[0] <== denomination;
     hashId.inputs[1] <== obligor;
     hashId.inputs[2] <== amount;
-    hashId.inputs[3] <== oracle_address;
-    hashId.inputs[4] <== oracle_owner;
-    hashId.inputs[5] <== oracle_key_sender;
-    hashId.inputs[6] <== oracle_value_sender;
-    hashId.inputs[7] <== oracle_key_recipient;
-    hashId.inputs[8] <== oracle_value_recipient;
-    hashId.inputs[9] <== unlock_sender;
-    hashId.inputs[10] <== unlock_receiver;
-    hashId.inputs[11] <== deal_address;
-    hashId.inputs[12] <== deal_group_id;
-    hashId.inputs[13] <== deal_id;
+    hashId.inputs[3] <== count;
+    // hashId.inputs[4] <== oracle_address;
+    // hashId.inputs[5] <== oracle_owner;
+    // hashId.inputs[6] <== oracle_key_sender;
+    // hashId.inputs[7] <== oracle_value_sender;
+    // hashId.inputs[8] <== oracle_key_recipient;
+    // hashId.inputs[9] <== oracle_value_recipient;
+    // hashId.inputs[10] <== unlock_sender;
+    // hashId.inputs[11] <== unlock_receiver;
+    hashId.inputs[4] <== deal_address;
+    hashId.inputs[5] <== deal_group_id;
+    hashId.inputs[6] <== deal_id;
     idHash <== hashId.out;
 }
 

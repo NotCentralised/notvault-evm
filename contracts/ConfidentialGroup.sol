@@ -136,11 +136,18 @@ contract ConfidentialGroup {
             address caller,
             uint256 group_id,
             address vault,
+
             CreateRequestMessage[] memory cr,
+            SendProof memory proof,
             PolicyProof[] memory po,
-            address deal_address,
-            uint256 deal_group_id,
-            uint256 deal_id,
+            
+            // address denomination,
+            // address obligor,
+            
+            // address deal_address,
+            // uint256 deal_group_id,
+            // uint256 deal_id,
+            Payment memory payment,
             bool agree
         ) 
         public
@@ -154,7 +161,8 @@ contract ConfidentialGroup {
                 int8 call_counter = 0;
 
                 for(uint i = 0; i < po.length; i++){
-                    require(po[i].input[1] == cr[i].input_send[2], "amounts don't match");
+                    // require(po[i].input[1] == cr[i].input_send[2], "amounts don't match");
+                    require(po[i].input[1] == proof.input[2], "amounts don't match");
                     Policy memory policy = policies[group_id][po[i].input[0]];
                     
                     if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
@@ -190,7 +198,7 @@ contract ConfidentialGroup {
                 }
             }
 
-            ConfidentialVault(vault).createRequestMeta(groupWallets[group_id], group_id, cr, deal_address, deal_group_id, deal_id, agree);
+            ConfidentialVault(vault).createRequestMeta(groupWallets[group_id], group_id, cr, proof, payment, agree);
     }
 
     function acceptRequestMeta(
