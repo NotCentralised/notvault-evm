@@ -26,30 +26,76 @@ For more detailed information please go to our [GITBOOK](https://docs.notcentral
 
 
 # Contracts
+## ConfidentialVault.sol
+Description: The ConfidentialVault contract enables confidential token transfers between wallets. It uses zero-knowledge proofs to ensure that the sender's balance is sufficient for the transfer without revealing the actual amounts on the blockchain.
 
-### Deployment Costs
-|            | GOERLI                                                                                     | SEPOLIA                                                                                     | Hedera Testnet                                                | Base Goerli                                                                                | Deployment Gas |
-|------------|--------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|---------------------------------------------------------------|--------------------------------------------------------------------------------------------|----------------|
-| Wallet     | [0x5F4...](https://goerli.etherscan.io/address/0x5F4f89bd3B61740F2E8264FE9ff8e2Cdf295B2bF) | [0x4b8...](https://sepolia.etherscan.io/address/0x4b8Dfd5BdE2907c9b45E5C392421DE5B31E88313) | [0x756...](https://hashscan.io/testnet/contract/0.0.14163364) | [0xF97...](https://goerli.basescan.org/address/0xF972E1A76F08c377bF0DB8ed52a231EE99bD0b41) | 1,162,239      |
-| Vault      | [0x4C1...](https://goerli.etherscan.io/address/0x4C1fcce4474CEA690Af57f08eE189CaC4f2e4721) | [0x38A...](https://sepolia.etherscan.io/address/0x38Ad327aDF4c763C0686ED8DBc6fa45c7dAb29AE) | [0xd80...](https://hashscan.io/testnet/contract/0.0.14163367) | [0x9d6...](https://goerli.basescan.org/address/0x9d68228C8E043630041Cf08f911D2EC329390555) | 5,041,627      |
-| Deal       | [0xe8F...](https://goerli.etherscan.io/address/0xe8Fb759ABA61091700eBF85F35b866c751Ba6DD6) | [0x523...](https://sepolia.etherscan.io/address/0x52329a088c7d8EBd368fe67a6d3966E3BB42A5BB) | [0x38c...](https://hashscan.io/testnet/contract/0.0.14163369) | [0xFCC...](https://goerli.basescan.org/address/0xFCC3B351310c2E16035E2126cee14175F5350c91) | 4,328,511      |
-| Oracle     | [0xa94...](https://goerli.etherscan.io/address/0xa946D99b5dDdd21688AfBBF16c196052c93577Ba) | [0x8b2...](https://sepolia.etherscan.io/address/0x8b2a145b8ccdAfC79DDD3D6bE56Bd513a1e0AA49) | [0xeEB...](https://hashscan.io/testnet/contract/0.0.14163370) | [0xbbf...](https://goerli.basescan.org/address/0xbbf1D9AE5919E25567e17FE0e5187f35F6F562a6) |   693,393      |
-| ServiceBus | [0x989...](https://goerli.etherscan.io/address/0x9894CE6BB4dFdE24ACD6276D9CF4Fbd20d67d272) | [0x5A9...](https://sepolia.etherscan.io/address/0x5A95e579944a53370c51760A2db3dF6b96b866F1) | [0xCe0...](https://hashscan.io/testnet/contract/0.0.14195226) | [0x24A...](https://goerli.basescan.org/address/0x24A4d3335f88e59FA672093226D666B1D9CAACAf) |   735,119      |
+### Key Features:
+- Confidential Transfers: Allows sending tokens without revealing the amount.
+- Zero-Knowledge Proofs: Ensures the validity of transactions without disclosing sensitive information.
+- Asynchronous Process: The transfer process involves creating a send request and then accepting it in separate transactions.
+- Unlocking Conditions: The sender can set conditions for unlocking the tokens, such as time-based locks or oracle-based conditions.
 
+### Usage:
+- Deposit Tokens: The sender deposits ERC20 tokens into the vault.
+- Create Send Request: The sender creates a send request with a ZK proof, locking the tokens.
+- Accept Request: The receiver accepts the request with a ZK proof, updating their balance.
+- Unlocking Conditions:
 
-### Method Costs
-|          | Methods            | Approx Gas | Gas Limit |
-|----------|--------------------|------------|-----------|
-| Wallet   | registerKeys       | 684,397    | 700,000   |
-| Wallet   | setValue           | 137,643    | 200,000   |
-| Wallet   | setFileIndex       | 90,313     | 100,000   |
-| Wallet   | setCredentialIndex | 90,313     | 100,000   |
-| Vault    | deposit            | 552,191    | 600,000   |
-| Vault    | withdraw           | 374,927    | 400,000   |
-| Vault    | createRequest      | 1,152,414  | 1,200,000 |
-| Vault    | acceptRequest      | 618,821    | 650,000   |
+    - Earliest time the receiver can unlock tokens.
+    - Earliest time the sender can unlock tokens.
+    - Oracle-based conditions for both sender and receiver.
 
+## ConfidentialDeal.sol
+Description: The ConfidentialDeal contract represents legal agreements as NFTs. It allows the owner to attach required payments and the counterpart to agree to the deal by locking in these payments.
 
+### Key Features:
+- NFT Representation: Each deal is represented as an NFT.
+- Custom Functionality: Allows programming of cashflows and selective disclosure using ZK methodologies.
+- Preprogrammed Payments: The owner can attach required payments that the counterpart must lock in before agreeing to the deal.
+
+###  Usage:
+- Mint Deal: The owner mints a new deal NFT specifying the counterpart, ZK hash, and expiry.
+- Attach Payments: The owner attaches required payments to the deal.
+- Accept Deal: The counterpart locks in the payments and accepts the deal.
+
+## ConfidentialAccessControl.sol
+Description: The ConfidentialAccessControl contract manages access control for the vault and other contracts. It allows relay wallets to execute transactions on behalf of user wallets.
+
+### Key Features:
+- Meta Transactions: Allows relay wallets to execute transactions on behalf of user wallets.
+- Treasurer Management: Manages treasurers for different ERC20 denominations.
+
+### Usage:
+
+- Execute Meta Transaction: The relay wallet executes a transaction signed by the user wallet.
+- Add Treasurer: The owner adds a treasurer for a specific ERC20 denomination.
+- Check Treasurer: Verify if an address is the treasurer for a given ERC20 denomination.
+
+## ConfidentialGroup.sol
+Description: The ConfidentialGroup contract manages groups of wallets with specific policies for token transfers. It allows group owners to set policies and add members.
+
+### Key Features:
+- Group Management: Manages groups of wallets with specific policies.
+- Policy-Based Transfers: Allows token transfers based on predefined policies.
+- Membership Management: Manages group memberships and linked Deal NFTs.
+
+### Usage:
+- Register Group: Create a new group with a set of members.
+- Set Group Wallet: Set the wallet address for the group.
+- Add Policy: Add a policy for the group.
+- Create Request: Create a send request from the group account.
+- Accept Request: Accept a send request on behalf of the group.
+
+## ConfidentialOracle.sol
+Description: The ConfidentialOracle contract allows external parties to set values in a key-pair to unlock send requests in the vault.
+
+### Key Features:
+- Value Setting: Allows setting values for a key-pair linked to an address.
+- Proof Verification: Verifies ZK proofs to ensure the validity of the values.
+
+### Usage:
+- Set Value: Set a value for a key-pair using a ZK proof.
+- Get Value: Retrieve the value of a key-pair.
 
 ----
 # Building
@@ -96,7 +142,12 @@ Run the tests
 npx hardhat test
 ```
 
-
 # License
+This project is licensed under the MIT License.
 
-MIT License.
+# Authors
+@NumbersDeFi
+
+# Acknowledgments
+OpenZeppelin for their ERC20 and ERC721 implementations.
+The Ethereum community for their support and contributions to the ecosystem.
