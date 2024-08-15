@@ -17,9 +17,16 @@ pragma solidity ^0.8.9;
 import "./circuits/IApproverVerifier.sol";
 
 contract ConfidentialOracle {
+    /* 
+        General description of custom functionality
+
+        Confidential Oracles allow external parties to set values in a key-pair in order to unlock send requests in the vault.
+        The external party is assumed to be the owner of an address and this address it the only one able to set a value for a given key in a key-pair linked to that address.
+        The owner of an address is able to set a value to given key.
+        A viewer can check the value of a key that can only be set by a specific address owner.
+    */
 
     address _verifier;
-
     address accessControl;
     
     mapping (address => mapping (uint256 => uint256)) private valuesMap;
@@ -41,15 +48,11 @@ contract ConfidentialOracle {
             return valuesMap[owner][key];
     } 
 
-    function setValue(
-            bytes calldata proof,
-            uint[2] memory input
-        )
-        public
-        {
-            setValueMeta(msg.sender, proof, input);
-    }
-
+    /*
+        Set value attached to a given proof. 
+        The ZK proof contains a key and value.
+        The ZK proof allows the contract to verify that the address owner knows the underlying value of the hashed value.
+    */
     function setValueMeta(
             address caller,
             bytes calldata proof,

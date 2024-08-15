@@ -53,67 +53,79 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         internal
         whenNotPaused
         override
-    {
+        {
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
-
-    // The following functions are overrides required by Solidity.
 
     function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
         super._burn(tokenId);
     }
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {   
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
     ////// CUSTOM
 
+    /* 
+        General description of custom functionality
+
+        The Confidential Deal is an NFT representation of a legal agreement. 
+        The NFT has custom functionality allowing a counterpart to agree to the represented agreement.
+        The NFT enables the programming of cashflows from the counterpart to the owner of the NFT.
+
+        The owner of the NFT is able to attach required payments straight after minting but prior to the counterpart agreeing.
+        If an NFT has attached required payments, the counterpart must first lock-in these payments prior to agreeing to the deal.
+
+        The main confidential information is represented as a hash generated using ZK methodologies to enable selective disclosure which is stored in the "tokenUri".
+        Note: All other information including the counterpart and dates is visible by all.
+
+        The owner of, [ ownerOf(id) ], is the beneciary of the cashflows related to the agreement.
+        The counterpart is the payer of the cashflows if applicable to the deal.
+    */
+
+    /* 
+        Structure containing information describing a given deal.
+    */
     struct DealStruct{
-        uint256 tokenId;
-        address counterpart;
-        string tokenUri;
-        uint32 created;
-        uint32 cancelledOwner;
-        uint32 cancelledCounterpart;
-        uint32 accepted;
-        uint32 expiry;
+        uint256     tokenId;
+        address     counterpart;
+        string      tokenUri;               // ZK Hash
+        uint32      created;                // date that the owner minted / created the deal
+        uint32      cancelledOwner;         // date the owner cancelled if applicable
+        uint32      cancelledCounterpart;   // date the counterpart cancelled if applicable
+        uint32      accepted;               // date the owner cancelled if applicable
+        uint32      expiry;
     }
 
-    mapping (address => uint256) ownerNonce;
-    mapping (address => uint256) counterPartNonce;
+    mapping (address => uint256)                        ownerNonce;
+    mapping (address => uint256)                        counterPartNonce;
     
-    mapping (address => mapping (uint256 => uint256)) ownerPoolIndex;
-    mapping (address => mapping (uint256 => uint256)) counterPartPoolIndex;
+    mapping (address => mapping (uint256 => uint256))   ownerPoolIndex;
+    mapping (address => mapping (uint256 => uint256))   counterPartPoolIndex;
 
-    mapping (uint256 => uint32) cancelledOwner;
-    mapping (uint256 => uint32) cancelledCounterpart;
-    mapping (uint256 => uint32) acceptedTime;
-    mapping (uint256 => uint32) expiryTime;
-    mapping (uint256 => uint32) createdTime;
-    mapping (uint256 => address) counterparts;
-    mapping (uint256 => address) minter;
+    mapping (uint256 => uint32)                         cancelledOwner;
+    mapping (uint256 => uint32)                         cancelledCounterpart;
+    mapping (uint256 => uint32)                         acceptedTime;
+    mapping (uint256 => uint32)                         expiryTime;
+    mapping (uint256 => uint32)                         createdTime;
+    mapping (uint256 => address)                        counterparts;
+    mapping (uint256 => address)                        minter;
 
-    mapping (uint256 => uint256) dealNonce;
-    mapping (uint256 => mapping (uint256 => uint256)) sendDealIndex;
+    mapping (uint256 => uint256)                        dealNonce;
+    mapping (uint256 => mapping (uint256 => uint256))   sendDealIndex;
 
-    mapping (uint256 => uint256) minNonce;
-    mapping (uint256 => mapping (uint256 => uint256)) minDealIndex;
+    mapping (uint256 => uint256)                        minNonce;
+    mapping (uint256 => mapping (uint256 => uint256))   minDealIndex;
 
+    /*
+        The owner calls the mint function to create a new  representation of an agreemenet. 
+        The owner must specify the counterpart, the ZK hash and expiry of the deal.
+    */
     function safeMintMeta(address caller, address counterpart, string memory uri, uint32 expiry) public returns (uint256) {
         require(expiry > block.timestamp, "expiry must be in the future");
         address owner = msg.sender == accessControl ? caller : msg.sender;
@@ -194,6 +206,9 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             return srs;
     }
 
+    /*
+        Programmed payments linked to the deal are registered with the Deal NFT. The payments are identified with the idHash.
+    */
     function addSendRequestMeta(
             address caller,
             uint256 tokenId,
@@ -202,12 +217,15 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         public
         {
             address sender = msg.sender == accessControl ? caller : msg.sender;
-            require(sender == confidentialVaultAddress, "Only the counterpart can accept");
+            require(sender == confidentialVaultAddress, "Only the vault contract can add");
             uint idxNonce = dealNonce[tokenId];
             sendDealIndex[tokenId][idxNonce] = idHash;
             dealNonce[tokenId] = idxNonce + 1;
     }
 
+    /*
+        Prior to the Deal NFT being agreed to by the counterpart, the owner can preprogram payments requiring them to be committed by the counterpart prior to agreement.
+    */
     function addPaymentMeta(
             address caller,
             uint256 tokenId,
@@ -222,6 +240,9 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             minNonce[tokenId] = idxNonce + 1;
     }
 
+    /*
+        Counterpart accepts the agreement. This can only happen if the required payments have been committed previously.
+    */
     function acceptMeta(address caller, uint256 tokenId)
         public
         {
@@ -239,6 +260,9 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             acceptedTime[tokenId] = uint32(block.timestamp);
     }
 
+    /* 
+        Both the owner and counterpart can cancel the agreement.
+    */
     function cancelMeta(
             address caller,
             uint256 tokenId

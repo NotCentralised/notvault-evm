@@ -27,12 +27,7 @@ import "./ConfidentialOracle.sol";
 import "./ConfidentialAccessControl.sol";
 import "./utils/PoseidonT2.sol";
 
-// import "./circuits/IPaymentSignatureVerifier.sol";
-
 struct CreateRequestMessage{
-    // address denomination;
-    // address obligor;
-    
     address oracle_address;
     address oracle_owner;
 
@@ -43,9 +38,6 @@ struct CreateRequestMessage{
 
     uint32 unlock_sender;
     uint32 unlock_receiver;
-
-    // bytes   proof_send;
-    // uint[5] input_send;
 }
 
 struct SendProof {
@@ -89,6 +81,40 @@ struct SendRequest{
 }
 
 contract ConfidentialVault {
+    
+    /* 
+        General description of custom functionality
+
+        Confidential Vault is a smart contract that allows a sender wallet to send a given number of tokens to a recipient wallet where the number of tokens is unknown to the blockchain.
+        The smart contract stores hashes instead of transparent balances and the calculation of balance changes happens off-chain.
+        Using zero-knowledge-proofs, the smart contract only accepts transfers that are not spending more than the sender initially had.
+        
+        Sending tokens using the vault is an asynchronous process.
+            - The sender first creates a request to send tokens and locks the number of sent tokens such that only the sender or the receiver can unlock them under certain conditions.
+            - The receiver can accept the locked tokens in the sender's request in a separate transaction.
+
+        Steps of use:
+            - Sender deposits a given number of ERC20 tokens to the vault. NOTE: This transaction is visible to all
+            - Sender creates a send request locking in the token amount and deducting this amount from their hashed balance. This step requires a ZK proof.
+            - Received accepts the request and offers a ZK proof to the contract that new balance is the sum of the old balance and the sent amount.
+             
+        The sender is able to set unlocking conditions on each send request including:
+            - earliest time the receiver can unlock tokens
+            - earliest time the sender can unlock tokens
+            - value an oracle must have for the receiver to unlock tokens
+            - value an oracle must have for the sender to unlock tokens
+
+        Recipient
+        Send Requests are programmed to be received by either:
+            - a specific wallet defined by the deal_address if the deal_id is set to 0
+            - the owner of a deal if the deal_id is not 0. If the deal_id is not zero, the deal_addres must be the smart contract address of the deal
+
+        Obligor
+        The vault allows the treasurer wallet of a given denomination to increase their confidential vault balance without depositing the underlying ERC20 token.
+        This enables a treasurer to mint "credit" linked to a given denomination issued by the "obligor".
+        This obligor linked token is meant to be redeemed by the obligor in exchange for the ERC20 token.
+    */
+
     address sendVerifier;
     address receiveVerifier;
     address paymentSignatureVerifierAddress;
@@ -137,6 +163,10 @@ contract ConfidentialVault {
         return sendNonce[account][groupId];
     }
 
+    /*
+        Sender deposits an ERC20 token of the denomination address.
+        If the obligor parameter is not the zero address, the smart contract verifies that the caller is the treasurer.
+    */
     function depositMeta(
             address caller,
             uint256 group_id,
@@ -171,6 +201,9 @@ contract ConfidentialVault {
             _hashBalances[payer_address][group_id][denomination][obligor] = input[1];
     }
 
+    /*
+        Withdraw amont from the vault by decreasing vault balance and transfering ERC20 from smart contract balance to the caller.
+    */
     function withdrawMeta(
             address         caller,
             uint256         group_id,
@@ -207,6 +240,34 @@ contract ConfidentialVault {
                 require(ConfidentialAccessControl(accessControl).isTreasurer(payer_address, denomination), "Only Treasurer can deposit");
     }
 
+    /*
+        Create a send request based on the following parameters:
+            - group_id: defines the group from which the balance of the send request is deducted
+
+            - cr:
+                oracle_address: address of oracle that can unlock the send request
+                oracle_owner: owner of the key that can unlock the send request
+
+                oracle_key_sender: key for the value that unlocks the request for the sender
+                oracle_value_sender: value that unlocks the request for the sender
+                oracle_key_recipient: key for the value that unlocks the request for the recipient
+                oracle_value_recipient: value that unlocks the request for the recipient
+
+                unlock_sender: earliest time a sender can unlock
+                unlock_receiver: earliest time a recipient can unlock
+
+            - proof: ZK proof to show that the balance is enough to send tokens and the new balance is the deduction of the tokens.
+
+            - payment: 
+                denomination: address of the ERC20 tokens
+                obligor: obligor linked to the credit token if this value is not the zero address
+
+                deal_address: address of the recipient or the deal contract address
+                deal_group_id: group_id of the recipient
+                deal_id: if the deal_id is not 0, the recipient of the send request is the owner of the deal. otherwise the recipient is the address of the deal_address
+
+            - agree: if this send request is linked to a deal and the necessary tokens are being locked, setting this to true will call the agree function of the deal smart contract
+    */
     function createRequestMeta(
             address caller,
             uint256 group_id,
@@ -277,6 +338,9 @@ contract ConfidentialVault {
             }
     }
 
+    /*
+        Accept the request linked to a hash id. A proof is necessary to change the balance of the accepting wallet.
+    */
     function acceptRequestMeta(
             address caller,
             uint256 idHash,

@@ -8,22 +8,14 @@ import "./ConfidentialAccessControl.sol";
 
 contract ConfidentialTreasury is ERC20, Ownable {
 
+    /* 
+        General description of custom functionality
+
+        Confidential Treasury is a meta transaction wrapper of an ERC20 contract.
+        This contract also ensures that only a specific "treasurer" wallet is able to mint or burn.
+    */
+
     address accessControl;
-
-    // mint function
-    // issue tokens linked to a given obligor. the obligor wallet is the id in the erc1155 like token
-    // only an approved treasurer is allowed to mint an obligor linked token
-    // minting automatically deposits the token in the confidential vault
-    // the transfer is managed by the vault
-
-    // burn function
-    // only the treasurer can burn tokens after the FIAT account has been charged.
-    // - creditor -> treasurer api : request payment of X credit tokens
-    // - creditor -> locks amount into burn functionality
-    // - treasurer api -> verifies balance, requests FIAT
-    // - treasurer api -> receives cash -> mint funded token (0)
-    // - treasurer api -> send FIAT -> burn funded
-
     uint8 private _customDecimals;
 
     constructor(string memory name, string memory symbol, uint256 total_supply, uint8 customDecimals, address _accessControl) ERC20(name, symbol) {
@@ -37,32 +29,30 @@ contract ConfidentialTreasury is ERC20, Ownable {
     }
 
     function approveMeta(
-        address caller,
-        address destination,
-        uint256 amount
-    ) public {
-        address sender = accessControl == msg.sender ? caller : msg.sender;
-        _approve(sender, destination, amount);
+            address caller,
+            address destination,
+            uint256 amount
+        ) public {
+            address sender = accessControl == msg.sender ? caller : msg.sender;
+            _approve(sender, destination, amount);
     }
 
     function mintMeta(
-        address caller,
-        uint256 amount
-    ) public {
-        // require(accessControl == msg.sender, "Only the owner can set a treasurer");
-        address sender = accessControl == msg.sender ? caller : msg.sender;
-        require(ConfidentialAccessControl(accessControl).isTreasurer(sender, address(this)), "Only Treasurer can mint");
-        _mint(sender, amount);
+            address caller,
+            uint256 amount
+        ) public {
+            address sender = accessControl == msg.sender ? caller : msg.sender;
+            require(ConfidentialAccessControl(accessControl).isTreasurer(sender, address(this)), "Only Treasurer can mint");
+            _mint(sender, amount);
     }
 
     function burnMeta(
-        address caller,
-        uint256 amount
-    ) public {
-        // require(accessControl == msg.sender, "Only the owner can set a treasurer");
-        address sender = accessControl == msg.sender ? caller : msg.sender;
-        require(ConfidentialAccessControl(accessControl).isTreasurer(sender, address(this)), "Only Treasurer can burn");
+            address caller,
+            uint256 amount
+        ) public {
+            address sender = accessControl == msg.sender ? caller : msg.sender;
+            require(ConfidentialAccessControl(accessControl).isTreasurer(sender, address(this)), "Only Treasurer can burn");
 
-        _burn(sender, amount);
+            _burn(sender, amount);
     }
 }

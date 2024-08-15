@@ -19,28 +19,21 @@ include "../../node_modules/circomlib/circuits/poseidon.circom";
 include "../../node_modules/circomlib/circuits/comparators.circom";
 
 template HashSender () {  
+    /*
+        Circuit that generates a token sending proof ensuring:
+            - amount being sent is less than or equal to the current balance
+            - the new balance is correct
+    */
 
     // Declaration of signals.  
     signal input sender;
     signal input senderBalanceBeforeTransfer;
-    // signal input amount;  
     signal input nonce;
 
     signal input denomination;
     signal input obligor;
     signal input amount;
     signal input count;
-
-    // signal input oracle_address;
-    // signal input oracle_owner;
-    
-    // signal input oracle_key_sender;
-    // signal input oracle_value_sender;
-    // signal input oracle_key_recipient;
-    // signal input oracle_value_recipient;
-    
-    // signal input unlock_sender;
-    // signal input unlock_receiver;
 
     signal input deal_address;
     signal input deal_group_id;
@@ -56,56 +49,50 @@ template HashSender () {
 
     nonceVerification <== nonce;
     
+    // sending amount greater than or equal to 0
     component comp1 = GreaterEqThan(252);
     comp1.in[0] <== amount * count;
     comp1.in[1] <== 0;
     comp1.out === 1;
 
+    // current balance is greater than or equal to the sending amount
     component comp2 = GreaterEqThan(252);
     comp2.in[0] <== senderBalanceBeforeTransfer;
     comp2.in[1] <== amount * count;
     comp2.out === 1;
 
-    // component hashId = Poseidon(4);
-    // hashId.inputs[0] <== sender;
-    // hashId.inputs[1] <== senderBalanceBeforeTransfer;
-    // hashId.inputs[2] <== amount;
-    // hashId.inputs[3] <== nonce;
-    // idHash <== hashId.out;
+    // generating an id hash
     component hashId = Poseidon(7);
     hashId.inputs[0] <== denomination;
     hashId.inputs[1] <== obligor;
     hashId.inputs[2] <== amount;
     hashId.inputs[3] <== count;
-    // hashId.inputs[4] <== oracle_address;
-    // hashId.inputs[5] <== oracle_owner;
-    // hashId.inputs[6] <== oracle_key_sender;
-    // hashId.inputs[7] <== oracle_value_sender;
-    // hashId.inputs[8] <== oracle_key_recipient;
-    // hashId.inputs[9] <== oracle_value_recipient;
-    // hashId.inputs[10] <== unlock_sender;
-    // hashId.inputs[11] <== unlock_receiver;
     hashId.inputs[4] <== deal_address;
     hashId.inputs[5] <== deal_group_id;
     hashId.inputs[6] <== deal_id;
     idHash <== hashId.out;
 
+    // hash of the amunt being sent
     component hashAmount = Poseidon(1);
     hashAmount.inputs[0] <== amount;
     amountHash <== hashAmount.out;
 
+    // hash of the total amount
     component hashTotal = Poseidon(1);
     hashTotal.inputs[0] <== amount * count;
     totalHash <== hashTotal.out;
 
+    // hash of balance before amount deduction
     component hashBeforeBalance = Poseidon(1);
     hashBeforeBalance.inputs[0] <== senderBalanceBeforeTransfer;
     senderBalanceBeforeTransferHash <== hashBeforeBalance.out;
 
+    // hash of balance after amount deduction
     component hashAfterBalance = Poseidon(1);
     hashAfterBalance.inputs[0] <== senderBalanceBeforeTransfer - amount * count;
     senderBalanceAfterTransferHash <== hashAfterBalance.out;
 
+    // hash of count
     component countAmount = Poseidon(1);
     countAmount.inputs[0] <== count;
     countHash <== countAmount.out;

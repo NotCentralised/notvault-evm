@@ -91,11 +91,7 @@ template DataVerifier (tLevel, nLevel) {
         vhasher.in[3] <== salt[1];
 
         vIdHash  <== vhasher.out;
-    }
-    // vhasher.in[2] <== nhasher_out[0];
-    // vhasher.in[3] <== nhasher_out[1];
-    
-    
+    }    
 }
 
 // component main = DataVerifier(35, 100); char = 1,120
