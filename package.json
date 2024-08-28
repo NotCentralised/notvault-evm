@@ -2,7 +2,7 @@
   "name": "@notcentralised/notvault-evm",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "3.0.0",
-    "hardhat": "2.16.1",
+    "hardhat": "2.22.9",
     "hardhat-contract-sizer": "2.10.0",
     "ts-node": "10.9.1"
   },
