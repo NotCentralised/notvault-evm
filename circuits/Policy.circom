@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- General Policy Verification Circuit v0.9.869 (PolicyVerifier.circom)
+ General Policy Verification Circuit v0.9.969 (PolicyVerifier.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

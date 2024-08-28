@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Text Expiry Data Verifier Interface for Solidity v0.9.869 (circuits/ITextExpiryDataVerifier.sol)
+ Text Expiry Data Verifier Interface for Solidity v0.9.969 (circuits/ITextExpiryDataVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

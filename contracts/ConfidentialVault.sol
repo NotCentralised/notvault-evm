@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.869 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.969 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -146,21 +146,25 @@ contract ConfidentialVault {
             group = _group;
     }
 
-    function getSendRequestByAddress(address account, uint256 groupId, uint256 dealId, bool bySender) public view returns (SendRequest[] memory) {
-        uint256 count = bySender ? sendNonce[account][groupId] : receiveNonce[account][groupId][dealId];
-        SendRequest[] memory srs = new SendRequest[](count);
-        for(uint i = 0; i < count; i++){
-            srs[i] = sendPool[bySender ? sendPoolIndex[account][groupId][dealId][i] : receivePoolIndex[account][groupId][dealId][i]];
-        }
-        return srs;
+    // function getSendRequestByAddress(address account, uint256 groupId, uint256 dealId, bool bySender) public view returns (SendRequest[] memory) {
+    //     uint256 count = bySender ? sendNonce[account][groupId] : receiveNonce[account][groupId][dealId];
+    //     SendRequest[] memory srs = new SendRequest[](count);
+    //     for(uint i = 0; i < count; i++){
+    //         srs[i] = sendPool[bySender ? sendPoolIndex[account][groupId][dealId][i] : receivePoolIndex[account][groupId][dealId][i]];
+    //     }
+    //     return srs;
+    // }
+
+    function getSendRequestByIndex(address account, uint256 groupId, uint256 dealId, uint i, bool bySender) public view returns (SendRequest memory) {
+        return sendPool[bySender ? sendPoolIndex[account][groupId][dealId][i] : receivePoolIndex[account][groupId][dealId][i]];
     }
 
     function getSendRequestByID(uint256 idHash) public view returns (SendRequest memory) {
         return sendPool[idHash];
     }
 
-    function getNonce(address account, uint256 groupId) public view returns (uint256) {
-        return sendNonce[account][groupId];
+    function getNonce(address account, uint256 groupId, uint256 dealId, bool bySender) public view returns (uint256) {
+        return bySender ? sendNonce[account][groupId] : receiveNonce[account][groupId][dealId];
     }
 
     /*

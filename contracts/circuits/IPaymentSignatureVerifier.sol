@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- MinCommitment Interface for Solidity v0.9.869 (circuits/IMinCommitmentVerifier.sol)
+ MinCommitment Interface for Solidity v0.9.969 (circuits/IMinCommitmentVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
