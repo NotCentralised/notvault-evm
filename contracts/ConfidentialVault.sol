@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.1069 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.1269 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -25,6 +25,7 @@ import "./ConfidentialWallet.sol";
 import "./ConfidentialDeal.sol";
 import "./ConfidentialOracle.sol";
 import "./ConfidentialAccessControl.sol";
+import "./ConfidentialGroup.sol";
 import "./utils/PoseidonT2.sol";
 
 struct CreateRequestMessage{
@@ -146,15 +147,6 @@ contract ConfidentialVault {
             group = _group;
     }
 
-    // function getSendRequestByAddress(address account, uint256 groupId, uint256 dealId, bool bySender) public view returns (SendRequest[] memory) {
-    //     uint256 count = bySender ? sendNonce[account][groupId] : receiveNonce[account][groupId][dealId];
-    //     SendRequest[] memory srs = new SendRequest[](count);
-    //     for(uint i = 0; i < count; i++){
-    //         srs[i] = sendPool[bySender ? sendPoolIndex[account][groupId][dealId][i] : receivePoolIndex[account][groupId][dealId][i]];
-    //     }
-    //     return srs;
-    // }
-
     function getSendRequestByIndex(address account, uint256 groupId, uint256 dealId, uint i, bool bySender) public view returns (SendRequest memory) {
         return sendPool[bySender ? sendPoolIndex[account][groupId][dealId][i] : receivePoolIndex[account][groupId][dealId][i]];
     }
@@ -177,8 +169,9 @@ contract ConfidentialVault {
             address denomination,
             address obligor,
             uint256 amount,
-            bytes calldata proof,
-            uint[3] memory input
+            bytes calldata proof_sender,
+            uint[3] memory input_sender,
+            PolicyProof memory policy_proof
         )
         public 
         //payable // Hashlock comment H-02
@@ -191,18 +184,18 @@ contract ConfidentialVault {
 
             uint _hashBalance = _hashBalances[payer_address][group_id][denomination][obligor];
 
-            require((obligor == address(0) ? PoseidonT2.hash([amount]) == input[2] : amount == uint256(0)),"Incorrect Amount");
-            require(_hashBalance == 0 ? input[2] == input[1] : _hashBalance == input[0],"Balances don't match");
+            require((obligor == address(0) ? PoseidonT2.hash([amount]) == input_sender[2] : amount == uint256(0)),"Incorrect Amount");
+            require(_hashBalance == 0 ? input_sender[2] == input_sender[1] : _hashBalance == input_sender[0],"Balances don't match");
             require(amount <= IERC20(denomination).allowance(payer_address, contract_address), "Not Enough Allowance");
 
-            ReceiveVerifier(receiveVerifier).requireReceiverProof(proof, input);
+            ReceiveVerifier(receiveVerifier).requireReceiverProof(proof_sender, input_sender);
 
             if(obligor == address(0))
                 IERC20(denomination).transferFrom(payer_address, contract_address, amount);
             else
-                require(ConfidentialAccessControl(accessControl).isTreasurer(payer_address, denomination), "Only Treasurer can deposit");
+                ConfidentialAccessControl(accessControl).usePolicy(policy_proof);
 
-            _hashBalances[payer_address][group_id][denomination][obligor] = input[1];
+            _hashBalances[payer_address][group_id][denomination][obligor] = input_sender[1];
     }
 
     /*
@@ -214,8 +207,9 @@ contract ConfidentialVault {
             address         denomination,
             address         obligor,
             uint256         amount,
-            bytes calldata  proof,
-            uint[7] memory  input
+            bytes calldata  proof_sender,
+            uint[7] memory  input_sender,
+            PolicyProof memory policy_proof
         ) 
         public
         {
@@ -225,23 +219,23 @@ contract ConfidentialVault {
             address payer_address       = accessControl == msg.sender ? caller : msg.sender;
             address contract_address    = address(this);
 
-            input[3] = sendNonce[payer_address][group_id];
-            SendVerifier(sendVerifier).requireSenderProof(proof, input);
+            input_sender[3] = sendNonce[payer_address][group_id];
+            SendVerifier(sendVerifier).requireSenderProof(proof_sender, input_sender);
             
             require(
-                PoseidonT2.hash([amount]) == input[2] && // "incorrect amount"
-                input[3] == sendNonce[payer_address][group_id] && // "Nonce don't match"
-                _hashBalances[payer_address][group_id][denomination][obligor] == input[0] && // "initial balances don't match"
+                PoseidonT2.hash([amount]) == input_sender[2] && // "incorrect amount"
+                input_sender[3] == sendNonce[payer_address][group_id] && // "Nonce don't match"
+                _hashBalances[payer_address][group_id][denomination][obligor] == input_sender[0] && // "initial balances don't match"
                 payer_address != address(0) && denomination != address(0) && // "payer_address cannot be null"
                 0 < amount && amount <= IERC20(denomination).balanceOf(contract_address) // "amount must be less than or equal to contract balance"
-                , "setup error");
+                , "withdraw: setup error");
 
-            _hashBalances[payer_address][group_id][denomination][obligor] = input[1];
+            _hashBalances[payer_address][group_id][denomination][obligor] = input_sender[1];
             
             if(obligor == address(0))
                 IERC20(denomination).transfer(payer_address, amount);
             else
-                require(ConfidentialAccessControl(accessControl).isTreasurer(payer_address, denomination), "Only Treasurer can deposit");
+                ConfidentialAccessControl(accessControl).usePolicy(policy_proof);
     }
 
     /*
@@ -299,7 +293,7 @@ contract ConfidentialVault {
                 _hashBalances[sender][group_id][denomination][payment.obligor] == proof.input[0] && // "initial balances don't match"
                 PoseidonT2.hash([cr.length]) == proof.input[6] && // "incorrect count"
                 deal_id != 0 ? ConfidentialDeal(payment.deal_address).getDealByID(deal_id).expiry > block.timestamp : true // "deal cannot have expired when making a payment"
-            ,"setup error");
+            ,"create: setup error");
 
             
             uint send_nonce = sendNonce[sender][group_id];
@@ -376,7 +370,7 @@ contract ConfidentialVault {
                     : 
                     (sr.deal_address == receiver || sr.sender == receiver || group == receiver)
                 ) //  "You are not the owner"
-                ,"setup error");
+                ,"accept: setup error");
 
             
             if(receiver == sr.sender){

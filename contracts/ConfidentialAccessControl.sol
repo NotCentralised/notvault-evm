@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Access Control Contract for Solidity v0.9.1069 (ConfidentialAccessControl.sol)
+ Access Control Contract for Solidity v0.9.1269 (ConfidentialAccessControl.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -16,12 +16,17 @@
 pragma solidity ^0.8.9;
 
 import "./ConfidentialVault.sol";
+import "./ConfidentialGroup.sol";
+import "./circuits/IApproverVerifier.sol";
 
 contract ConfidentialAccessControl {
 
     address private owner;
     address private policyVerifier;
-    constructor(address _policyVerifier) { owner = msg.sender; policyVerifier = _policyVerifier;}
+    address private dataVerifier;
+    address private hashVerifier;
+
+    constructor(address _policyVerifier, address _dataVerifier, address _hashVerifier) { owner = msg.sender; policyVerifier = _policyVerifier; hashVerifier = _hashVerifier; dataVerifier = _dataVerifier; }
 
     /* 
         Execute a contract function by a relay wallet on behalf of a user wallet.
@@ -87,6 +92,7 @@ contract ConfidentialAccessControl {
     }
 
     mapping (address => address) private treasurers;
+    mapping (uint256 => uint256) private treasurerSecrets;
 
     /*
         Add the treasurer of a given ERC20 address denomination.
@@ -97,9 +103,107 @@ contract ConfidentialAccessControl {
     }
 
     /*
+        Add the treasurer secret
+    */
+    function addTreasurerSecret(bytes calldata proof, uint[2] memory input) public {
+        require(owner == msg.sender, "Only the owner can set a treasurer");
+        requireProof(proof, input);
+
+        treasurerSecrets[input[1]] = input[0];
+    }
+
+    /*
         Check if an address is the treasurer of a given ERC20 address denomination.
     */
     function isTreasurer(address caller, address denomination) public view returns (bool) {
         return treasurers[denomination] == caller;
+    }
+
+    /*
+        Check if an the secret is known
+    */
+
+    mapping (uint256 => Policy) policies;
+    mapping (uint256 => uint256) policyIndex;
+    uint256 policyNonce;
+
+    /*
+        Add a policy
+    */
+    function addPolicy(uint256 policy_id, Policy memory policy) public {
+        
+        require(msg.sender == owner, "only the owner can add policy");
+        require(policy.minSignatories >= 1, "at least one signatory");
+
+        policy.counter = 0;
+
+        policyIndex[policyNonce] = policy_id;
+        policies[policy_id] = policy;
+        policyNonce++;
+    }
+
+    /*
+        Use a policy
+    */
+    function usePolicy(
+            PolicyProof memory proof
+        ) 
+        public
+        {
+            if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("secret"))){
+                requireProof(proof.proof, [proof.input[0], proof.input[1]]);
+
+                require(treasurerSecrets[proof.input[1]] == proof.input[0], "secret's don't match");
+                return;
+            }
+            else if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("transfer")))
+                PolicyVerifier(policyVerifier).requirePolicyProof(proof.proof, [proof.input[0], proof.input[1]]);
+            
+            else
+                AlphaNumericalDataVerifier(dataVerifier).requireDataProof(proof.proof, [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
+            
+
+            int8 call_counter = 0;
+            Policy memory policy = policies[proof.input[0]];
+            
+            if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
+
+                int8 call_counter_policy = 0;
+                
+                for(uint j = 0; j < proof.signatures.length; j++){
+                    
+                    address signer = getSigner(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked((proof.proof))))), proof.signatures[j]);
+
+                    for(uint k = 0; k < policy.callers.length; k++){
+                        if(signer == policy.callers[k]){
+                            call_counter++;
+                            call_counter_policy++;
+                        }
+                    }
+
+                    require(call_counter_policy >= policy.minSignatories, "not enough signatories");
+                }
+                
+                policy.counter++;
+                policies[proof.input[0]] = policy;
+            }
+
+            require(call_counter > 0, "no signatory");            
+    }
+
+    function requireProof(
+            bytes memory _proof,
+            uint[2] memory input
+        ) internal view {
+            uint256[8] memory p = abi.decode(_proof, (uint256[8]));
+            require(
+                ApproverVerifier(hashVerifier).verifyProof(
+                    [p[0], p[1]],
+                    [[p[2], p[3]], [p[4], p[5]]],
+                    [p[6], p[7]],
+                    input
+            ),
+            "Invalid approver (ZK)"
+            );
     }
 }

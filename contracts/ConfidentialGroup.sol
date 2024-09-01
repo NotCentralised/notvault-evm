@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Group Contract for Solidity v0.9.1069 (ConfidentialGroup.sol)
+ Group Contract for Solidity v0.9.1269 (ConfidentialGroup.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -16,6 +16,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 import "./ConfidentialVault.sol";
 import "./circuits/IPolicyVerifier.sol";
@@ -74,9 +75,10 @@ contract ConfidentialGroup {
     address private dataVerifier;
 
     address private accessControl;
-    constructor(address _policyVerifier, address _accessControl) { 
+    constructor(address _policyVerifier, address _dataVerifier, address _accessControl) { 
         policyVerifier = _policyVerifier; 
         accessControl = _accessControl; 
+        dataVerifier = _dataVerifier;
         _tokenIdCounter.increment();
     }
 
@@ -216,7 +218,7 @@ contract ConfidentialGroup {
                             PolicyVerifier(policyVerifier).requirePolicyProof(po[i].proof, [po[i].input[0], po[i].input[1]]);
                         }
                         else{
-                            AlphaNumericalDataVerifier(policyVerifier).requireDataProof(po[i].proof, [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
+                            AlphaNumericalDataVerifier(dataVerifier).requireDataProof(po[i].proof, [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
                         }
                         
                         int8 call_counter_policy = 0;

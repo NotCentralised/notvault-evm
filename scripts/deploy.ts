@@ -1,5 +1,5 @@
 import { ethers, config } from "hardhat";
-import { metaMaskEncrypt, encryptedBySecret } from './utils';
+import { metaMaskEncrypt, encryptedBySecret, genApproverProof, textToBigInt } from './utils';
 
 import * as EthCrypto from "eth-crypto";
 
@@ -105,11 +105,11 @@ const main = async () => {
 
   console.log('Deploying Access Control')
   const accessControlFactory = await ethers.getContractFactory("ConfidentialAccessControl");
-  const accessControl = await accessControlFactory.connect(owner).deploy(policyContract.target);
+  const accessControl = await accessControlFactory.connect(owner).deploy(policyContract.target, alphaNumericalContract.target, hashApproverContract.target);
 
   console.log('Deploying Group')
   const groupFactory = await ethers.getContractFactory("ConfidentialGroup");
-  const groupContract = await groupFactory.connect(owner).deploy(policyContract.target, accessControl.target);
+  const groupContract = await groupFactory.connect(owner).deploy(policyContract.target, alphaNumericalContract.target, accessControl.target);
   console.log('Deployed GroupFactory: ', groupContract.target);
 
   
@@ -154,14 +154,18 @@ const main = async () => {
   const shadowContract = await TreasuryFactory.connect(owner).deploy("Layer-C Shadow", "LCS", total_supply_wbtc, decimals, accessControl.target);
 
   // const treasurerAddress = '0x554F0168a0234ad62E4B59131BEFA1E29Ed4c6c8';
-  const treasurerAddress = '0x04042Cda624b96051BEFA77dEC268F368461AAbb';
+  // const treasurerAddress = '0x04042Cda624b96051BEFA77dEC268F368461AAbb';
+
+  const proof_usdc = await genApproverProof({key: usdcContract.target, value: textToBigInt("usdc") });
+  const proof_cash = await genApproverProof({key: cashContract.target, value: textToBigInt("cash") });
+  const proof_shadow = await genApproverProof({key: shadowContract.target, value: textToBigInt("shadow") });
 
   console.log('Adding USDC treasurer');
-  await accessControl.connect(owner).addTreasurer(treasurerAddress, usdcContract.target);
+  await accessControl.connect(owner).addTreasurerSecret(proof_usdc.solidityProof, proof_usdc.inputs);
   console.log('Adding CASH treasurer');
-  await accessControl.connect(owner).addTreasurer(treasurerAddress, cashContract.target);
+  await accessControl.connect(owner).addTreasurerSecret(proof_cash.solidityProof, proof_cash.inputs);
   console.log('Adding SHADOW treasurer');
-  await accessControl.connect(owner).addTreasurer(treasurerAddress, shadowContract.target);
+  await accessControl.connect(owner).addTreasurerSecret(proof_shadow.solidityProof, proof_shadow.inputs);
   
 
   console.log('Deployed Done')

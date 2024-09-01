@@ -10,9 +10,39 @@ const CryptoJS = require("crypto-js");
   return this.toString();
 };
 
+export const textToBigInt = (text: string): bigint => {
+  // Convert each character to its ASCII code and concatenate the codes
+  let result = '';
+  
+  for (const char of text) {
+    // Get ASCII code of the character
+    const asciiCode = char.charCodeAt(0);
+    
+    // Pad the ASCII code to ensure it has three digits (e.g., '097' for 'a')
+    result += asciiCode.toString().padStart(3, '0');
+  }
+
+  // Convert the concatenated string of ASCII codes to a BigInt
+  return BigInt(result);
+}
+
 export const encryptedBySecret = (data: any, secret: string) => CryptoJS.AES.encrypt(JSON.stringify(data), secret).toString();
 
 export const decryptBySecret = (data: any, secret: string) =>  JSON.parse(CryptoJS.AES.decrypt(data , secret).toString(CryptoJS.enc.Utf8));
+
+export const genApproverProof = async (input: any) => {
+  const createWasm = './circuits/output/HashApprover_js/HashApprover.wasm'; // 1.6M
+  const createZkey = './circuits/output/HashApprover_0001.zkey'; //222kb
+
+  const { proof, publicSignals } = await makeProof(input, createWasm, createZkey);
+
+  const solidityProof = proofToSolidityInput(proof);
+  return {
+      proof: proof,
+      solidityProof: solidityProof,
+      inputs: publicSignals,
+  }
+}
 
 
 export const genReceiverProof = async (input: any) => {
