@@ -119,10 +119,6 @@ contract ConfidentialAccessControl {
         return treasurers[denomination] == caller;
     }
 
-    /*
-        Check if an the secret is known
-    */
-
     mapping (uint256 => Policy) policies;
     mapping (uint256 => uint256) policyIndex;
     uint256 policyNonce;
