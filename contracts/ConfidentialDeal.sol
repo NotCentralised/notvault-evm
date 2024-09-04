@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Deal Contract for Solidity v0.9.1269 (ConfidentialDeal.sol)
+ Deal Contract for Solidity v0.9.1369 (ConfidentialDeal.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -20,12 +20,13 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./ConfidentialVault.sol";
 import "./circuits/IPaymentSignatureVerifier.sol";
 
-contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721Burnable {
+contract ConfidentialDeal is ERC721, ERC721URIStorage, ERC721Enumerable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
 
@@ -41,18 +42,9 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         _tokenIdCounter.increment();
     }
 
-    function pause() public onlyOwner {
-        _pause();
-    }
-
-    function unpause() public onlyOwner {
-        _unpause();
-    }
-
     function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)
         internal
-        whenNotPaused
-        override
+        override(ERC721, ERC721Enumerable)
         {
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
@@ -65,7 +57,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage, ERC721Enumerable) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -94,6 +86,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
     struct DealStruct{
         uint256     tokenId;
         address     counterpart;
+        address     owner;
         string      tokenUri;               // ZK Hash
         uint32      created;                // date that the owner minted / created the deal
         uint32      cancelledOwner;         // date the owner cancelled if applicable
@@ -102,10 +95,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         uint32      expiry;
     }
 
-    mapping (address => uint256)                        ownerNonce;
-    mapping (address => uint256)                        counterPartNonce;
-    
-    mapping (address => mapping (uint256 => uint256))   ownerPoolIndex;
+    mapping (address => uint256)                        counterPartNonce;    
     mapping (address => mapping (uint256 => uint256))   counterPartPoolIndex;
 
     mapping (uint256 => uint32)                         cancelledOwner;
@@ -134,10 +124,6 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         _safeMint(owner, tokenId);
         _setTokenURI(tokenId, uri);
 
-        uint256 idxOwner = ownerNonce[owner];
-        ownerPoolIndex[owner][idxOwner] = tokenId;
-        ownerNonce[owner] = idxOwner + 1;
-
         uint256 idxCounterpart = counterPartNonce[counterpart];
         counterPartPoolIndex[counterpart][idxCounterpart] = tokenId;
         counterPartNonce[counterpart] = idxCounterpart + 1;
@@ -159,7 +145,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
             DealStruct memory
         ) {
 
-        return DealStruct(tokenId, counterparts[tokenId], super.tokenURI(tokenId), createdTime[tokenId], cancelledOwner[tokenId], cancelledCounterpart[tokenId], acceptedTime[tokenId], expiryTime[tokenId]);
+        return DealStruct(tokenId, counterparts[tokenId], this.ownerOf(tokenId), super.tokenURI(tokenId), createdTime[tokenId], cancelledOwner[tokenId], cancelledCounterpart[tokenId], acceptedTime[tokenId], expiryTime[tokenId]);
     }
 
     function getDealByOwner(
@@ -169,12 +155,12 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         returns (
             DealStruct[] memory
         ) {
-        DealStruct[] memory srs = new DealStruct[](ownerNonce[owner]);
-        for(uint i = 0; i < ownerNonce[owner]; i++){
-            uint256 idx = ownerPoolIndex[owner][i];
-            srs[i] = DealStruct(idx, counterparts[idx], super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
-        }
-        return srs;
+            uint256 tokenCount = balanceOf(owner);
+            DealStruct[] memory srs = new DealStruct[](tokenCount);
+            for(uint i = 0; i < tokenCount; i++){
+                srs[i] = getDealByID(tokenOfOwnerByIndex(owner, i));
+            }
+            return srs;
     }
 
     function getDealByCounterpart(
@@ -187,7 +173,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
         DealStruct[] memory srs = new DealStruct[](counterPartNonce[counterpart]);
         for(uint i = 0; i < counterPartNonce[counterpart]; i++){
             uint256 idx = counterPartPoolIndex[counterpart][i];
-            srs[i] = DealStruct(idx, counterparts[idx], super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
+            srs[i] = DealStruct(idx, counterparts[idx], this.ownerOf(idx), super.tokenURI(idx), createdTime[idx], cancelledOwner[idx], cancelledCounterpart[idx], acceptedTime[idx], expiryTime[idx]);
         }
         return srs;
     }
@@ -282,4 +268,19 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, Pausable, Ownable, ERC721
                 cancelledCounterpart[tokenId] = uint32(block.timestamp);
             }
     }    
+
+    // function tokensOfOwner(address owner) external view returns (uint256[] memory) {
+    //     uint256 tokenCount = balanceOf(owner);
+
+    //     if (tokenCount == 0) {
+    //         // Return an empty array if the owner has no tokens
+    //         return new uint256[](0);
+    //     } else {
+    //         uint256[] memory tokens = new uint256[](tokenCount);
+    //         for (uint256 i = 0; i < tokenCount; i++) {
+    //             tokens[i] = tokenOfOwnerByIndex(owner, i);
+    //         }
+    //         return tokens;
+    //     }
+    // }
 }

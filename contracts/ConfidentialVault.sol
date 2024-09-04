@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.1269 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.1369 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -121,10 +121,12 @@ contract ConfidentialVault {
     address paymentSignatureVerifierAddress;
     mapping (address => mapping (uint256 => mapping (address => mapping (address => uint256)))) private _hashBalances;
     
+    // mapping (address => uint256) sendNonce;
     mapping (address => mapping (uint256 => uint256)) sendNonce;
     mapping (address => mapping (uint256 => mapping (uint256 => uint256))) receiveNonce;
     
-    mapping (address => mapping (uint256 => mapping (uint256 => mapping (uint256 => uint256)))) sendPoolIndex;
+    mapping (address => mapping (uint256 => mapping (uint256 => uint256))) sendPoolIndex;
+    // mapping (address => mapping (uint256 => mapping (uint256 => mapping (uint256 => uint256)))) sendPoolIndex;
     mapping (address => mapping (uint256 => mapping (uint256 => mapping (uint256 => uint256)))) receivePoolIndex;
     
     mapping (uint256 => SendRequest) sendPool;
@@ -148,7 +150,8 @@ contract ConfidentialVault {
     }
 
     function getSendRequestByIndex(address account, uint256 groupId, uint256 dealId, uint i, bool bySender) public view returns (SendRequest memory) {
-        return sendPool[bySender ? sendPoolIndex[account][groupId][dealId][i] : receivePoolIndex[account][groupId][dealId][i]];
+        return sendPool[bySender ? sendPoolIndex[account][groupId][i] : receivePoolIndex[account][groupId][dealId][i]];
+        // return sendPool[bySender ? sendPoolIndex[account][groupId][dealId][i] : receivePoolIndex[account][groupId][dealId][i]];
     }
 
     function getSendRequestByID(uint256 idHash) public view returns (SendRequest memory) {
@@ -294,8 +297,7 @@ contract ConfidentialVault {
                 PoseidonT2.hash([cr.length]) == proof.input[6] && // "incorrect count"
                 deal_id != 0 ? ConfidentialDeal(payment.deal_address).getDealByID(deal_id).expiry > block.timestamp : true // "deal cannot have expired when making a payment"
             ,"create: setup error");
-
-            
+          
             uint send_nonce = sendNonce[sender][group_id];
 
             for(uint i = 0; i < cr.length; i++){
@@ -315,7 +317,8 @@ contract ConfidentialVault {
                     cr[i].oracle_key_recipient, cr[i].oracle_value_recipient, 
                     cr[i].unlock_sender, cr[i].unlock_receiver);
 
-                sendPoolIndex[sender][group_id][deal_id][send_nonce] = idHash;
+                sendPoolIndex[sender][group_id][send_nonce] = idHash;
+                // sendPoolIndex[sender][group_id][deal_id][send_nonce] = idHash;
                 
                 send_nonce++;                
                 
