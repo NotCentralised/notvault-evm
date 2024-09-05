@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Service Bus for Solidity v0.9.1369 (ConfidentialServiceBus.sol)
+ Service Bus for Solidity v0.9.1469 (ConfidentialServiceBus.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

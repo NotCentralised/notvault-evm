@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Wallet for Solidity v0.9.1369 (ConfidentialWallet.sol)
+ Confidential Wallet for Solidity v0.9.1469 (ConfidentialWallet.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Hash Payment Signature Circuit v0.9.1369 (HashPaymentSignature.circom)
+ Hash Payment Signature Circuit v0.9.1469 (HashPaymentSignature.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
