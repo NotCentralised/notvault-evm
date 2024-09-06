@@ -40,11 +40,7 @@ contract ConfidentialTreasury is ERC20, Ownable {
     function mintMeta(
             address caller,
             uint256 amount,
-            // Policy memory policy,
             PolicyProof memory policy_proof
-            // bytes calldata proof,
-            // uint[2] memory input
-            
         ) public {
             address sender = accessControl == msg.sender ? caller : msg.sender;
             // require(ConfidentialAccessControl(accessControl).knowsTreasurerSecret(proof, input), "Only Treasurer can mint");
@@ -55,8 +51,6 @@ contract ConfidentialTreasury is ERC20, Ownable {
     function burnMeta(
             address caller,
             uint256 amount,
-            // bytes calldata proof,
-            // uint[2] memory input
             PolicyProof memory policy_proof
         ) public {
             address sender = accessControl == msg.sender ? caller : msg.sender;

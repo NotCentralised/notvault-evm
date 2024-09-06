@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.1469 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.1569 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -189,12 +189,14 @@ contract ConfidentialVault {
 
             require((obligor == address(0) ? PoseidonT2.hash([amount]) == input_sender[2] : amount == uint256(0)),"Incorrect Amount");
             require(_hashBalance == 0 ? input_sender[2] == input_sender[1] : _hashBalance == input_sender[0],"Balances don't match");
-            require(amount <= IERC20(denomination).allowance(payer_address, contract_address), "Not Enough Allowance");
+            
 
             ReceiveVerifier(receiveVerifier).requireReceiverProof(proof_sender, input_sender);
 
-            if(obligor == address(0))
+            if(obligor == address(0)){
+                require(amount <= IERC20(denomination).allowance(payer_address, contract_address), "Not Enough Allowance");
                 IERC20(denomination).transferFrom(payer_address, contract_address, amount);
+            }
             else
                 ConfidentialAccessControl(accessControl).usePolicy(policy_proof);
 
@@ -224,13 +226,13 @@ contract ConfidentialVault {
 
             input_sender[3] = sendNonce[payer_address][group_id];
             SendVerifier(sendVerifier).requireSenderProof(proof_sender, input_sender);
-            
+                        
             require(
                 PoseidonT2.hash([amount]) == input_sender[2] && // "incorrect amount"
                 input_sender[3] == sendNonce[payer_address][group_id] && // "Nonce don't match"
                 _hashBalances[payer_address][group_id][denomination][obligor] == input_sender[0] && // "initial balances don't match"
                 payer_address != address(0) && denomination != address(0) && // "payer_address cannot be null"
-                0 < amount && amount <= IERC20(denomination).balanceOf(contract_address) // "amount must be less than or equal to contract balance"
+                obligor == address(0) ? 0 < amount && amount <= IERC20(denomination).balanceOf(contract_address) : true // "amount must be less than or equal to contract balance"
                 , "withdraw: setup error");
 
             _hashBalances[payer_address][group_id][denomination][obligor] = input_sender[1];
