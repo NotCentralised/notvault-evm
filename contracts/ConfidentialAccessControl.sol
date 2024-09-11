@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Access Control Contract for Solidity v0.9.1569 (ConfidentialAccessControl.sol)
+ Access Control Contract for Solidity v0.9.1669 (ConfidentialAccessControl.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -17,51 +17,64 @@ pragma solidity ^0.8.9;
 
 import "./ConfidentialVault.sol";
 import "./ConfidentialGroup.sol";
+import "./ConfidentialWallet.sol";
 import "./circuits/IApproverVerifier.sol";
+
+struct Meta {
+    address userAddress;
+    address contractAddress;
+    bytes   functionSignature;
+    bytes32 message;
+    bytes   signature;
+}
 
 contract ConfidentialAccessControl {
 
-    address private owner;
     address private policyVerifier;
     address private dataVerifier;
     address private hashVerifier;
 
-    constructor(address _policyVerifier, address _dataVerifier, address _hashVerifier) { owner = msg.sender; policyVerifier = _policyVerifier; hashVerifier = _hashVerifier; dataVerifier = _dataVerifier; }
+    constructor(address _policyVerifier, address _dataVerifier, address _hashVerifier) { 
+        policyVerifier = _policyVerifier; 
+        hashVerifier = _hashVerifier; 
+        dataVerifier = _dataVerifier; 
+    }
 
     /* 
         Execute a contract function by a relay wallet on behalf of a user wallet.
         The user wallet signs the transaction off-chain, sends it to the relay wallet and the relay wallets transmits the transaction to the blockchain paying the gas fees.
         The smart contract verifies that the signed functioncal is signed by the user wallet.
     */
-    function executeMetaTransaction(
-        address userAddress,
-        address contractAddress,
-        bytes memory functionSignature,
-        bytes32 message,
-        bytes memory signature
-        ) public payable returns (bytes memory) {
+    function executeMultiMetaTransaction(
+        Meta[] memory meta
+        ) public payable returns (bytes[] memory) {
 
             uint256 chainId;
             assembly {
                 chainId := chainid()
             }
 
-            require(userAddress == getSigner(message, signature), "Signer and signature do not match");
-            require(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(functionSignature)))) == message, "function not hash");
+            bytes[] memory res = new bytes[](meta.length);
 
-            (bool success, bytes memory result) = contractAddress.call(functionSignature);
-            if (!success) {
-                if (result.length > 0) {
-                    assembly {
-                        let returndata_size := mload(result)
-                        revert(add(32, result), returndata_size)
+            for(uint i = 0; i < meta.length; i++){
+                require(meta[i].userAddress == getSigner(meta[i].message, meta[i].signature), "Signer and signature do not match");
+                require(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(meta[i].functionSignature)))) == meta[i].message, "function not hash");
+
+                (bool success, bytes memory result) = meta[i].contractAddress.call(meta[i].functionSignature);
+                if (!success) {
+                    if (result.length > 0) {
+                        assembly {
+                            let returndata_size := mload(result)
+                            revert(add(32, result), returndata_size)
+                        }
+                    } else {
+                        revert("Function call not successful and no error message returned");
                     }
-                } else {
-                    revert("Function call not successful and no error message returned");
                 }
-            }
 
-            return result;
+                res[i] = result;
+            }
+            return res;
     }
 
     /*
@@ -91,57 +104,43 @@ contract ConfidentialAccessControl {
         }
     }
 
-    mapping (address => address) private treasurers;
-    mapping (uint256 => uint256) private treasurerSecrets;
-
-    /*
-        Add the treasurer of a given ERC20 address denomination.
-    */
-    function addTreasurer(address caller, address denomination) public {
-        require(owner == msg.sender, "Only the owner can set a treasurer");
-        treasurers[denomination] = caller;
-    }
+    // mapping (address => address) private treasurers;
+    mapping(address => mapping (uint256 => uint256)) private secrets;
 
     /*
         Add the treasurer secret
     */
-    function addTreasurerSecret(bytes calldata proof, uint[2] memory input) public {
-        require(owner == msg.sender, "Only the owner can set a treasurer");
+    function addSecret(address caller, bytes calldata proof, uint[2] memory input) public {
+        address sender       = address(this) == msg.sender ? caller : msg.sender;
+
         requireProof(proof, input);
-
-        treasurerSecrets[input[1]] = input[0];
+        secrets[sender][input[1]] = input[0];
     }
 
-    /*
-        Check if an address is the treasurer of a given ERC20 address denomination.
-    */
-    function isTreasurer(address caller, address denomination) public view returns (bool) {
-        return treasurers[denomination] == caller;
-    }
-
-    mapping (uint256 => Policy) policies;
-    mapping (uint256 => uint256) policyIndex;
-    uint256 policyNonce;
+    mapping(address => mapping (uint256 => Policy)) policies;
+    mapping(address => mapping (uint256 => uint256)) policyIndex;
+    mapping(address => uint256) policyNonce;
 
     /*
         Add a policy
     */
-    function addPolicy(uint256 policy_id, Policy memory policy) public {
+    function addPolicyMeta(address caller, uint256 policy_id, Policy memory policy) public {
         
-        require(msg.sender == owner, "only the owner can add policy");
+        address sender       = address(this) == msg.sender ? caller : msg.sender;
         require(policy.minSignatories >= 1, "at least one signatory");
 
         policy.counter = 0;
 
-        policyIndex[policyNonce] = policy_id;
-        policies[policy_id] = policy;
-        policyNonce++;
+        policyIndex[sender][policyNonce[sender]] = policy_id;
+        policies[sender][policy_id] = policy;
+        policyNonce[sender]++;
     }
 
     /*
         Use a policy
     */
-    function usePolicy(
+    function usePolicyMeta(
+            address owner, 
             PolicyProof memory proof
         ) 
         public
@@ -149,7 +148,7 @@ contract ConfidentialAccessControl {
             if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("secret"))){
                 requireProof(proof.proof, [proof.input[0], proof.input[1]]);
 
-                require(treasurerSecrets[proof.input[1]] == proof.input[0], "secret's don't match");
+                require(secrets[owner][proof.input[1]] == proof.input[0], "secret's don't match");
                 return;
             }
             else if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("transfer")))
@@ -160,7 +159,7 @@ contract ConfidentialAccessControl {
             
 
             int8 call_counter = 0;
-            Policy memory policy = policies[proof.input[0]];
+            Policy memory policy = policies[owner][proof.input[0]];
             
             if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
 
@@ -181,7 +180,7 @@ contract ConfidentialAccessControl {
                 }
                 
                 policy.counter++;
-                policies[proof.input[0]] = policy;
+                policies[owner][proof.input[0]] = policy;
             }
 
             require(call_counter > 0, "no signatory");            

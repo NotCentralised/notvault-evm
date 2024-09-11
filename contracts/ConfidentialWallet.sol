@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Wallet for Solidity v0.9.1569 (ConfidentialWallet.sol)
+ Confidential Wallet for Solidity v0.9.1669 (ConfidentialWallet.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -21,24 +21,26 @@ import "./circuits/IReceiveVerifier.sol";
 import "./circuits/ISendVerifier.sol";
 import "./ConfidentialVault.sol";
 
+import "hardhat/console.sol";
+
 contract ConfidentialWallet {
-    mapping (address => string) publicKeys;
-    mapping (address => string) private encryptedPrivateKeys;
-    mapping (address => string) private encryptedSecrets;
-    mapping (address => string) private hashedContactId;
-    mapping (address => string) private encryptedContactId;
-    mapping (string  => address) private hashedContactIdReverse;
+    mapping (address => string)                     publicKeys;
+    mapping (address => string)                     private encryptedPrivateKeys;
+    mapping (address => string)                     private encryptedSecrets;
+    mapping (address => string)                     private hashedContactId;
+    mapping (address => string)                     private encryptedContactId;
+    mapping (string  => address)                    private hashedContactIdReverse;
 
     mapping (address => mapping (string => string)) private valueStore;
-    mapping (address => string) private fileIndex;
-    mapping (address => string) private credentialIndex;
+    mapping (address => string)                     private fileIndex;
+    mapping (address => string)                     private credentialIndex;
 
-    mapping (address => mapping (string => bool)) private credentialStatus;
+    mapping (address => mapping (string => bool))   private credentialStatus;
 
-    mapping (address => mapping (address => mapping (address => mapping (address => string)))) private privateBalances;
+    mapping (address => mapping (address => mapping (uint256 => mapping (address => mapping (address => string))))) private privateBalances;
     mapping (address => mapping (address => mapping (address => mapping (uint256 => string)))) private privateAmounts;
 
-    address accessControl;
+    address private accessControl;
 
     constructor(address _accessControl) { accessControl = _accessControl; }
 
@@ -80,20 +82,14 @@ contract ConfidentialWallet {
     }
 
     function getFileIndex(
-            address account
+            address         account
         ) public view returns (string memory) {
             return fileIndex[account];
     }
-    
-    function setFileIndex(
-            string memory value
-        ) public {
-            setFileIndexMeta(msg.sender, value);
-    }
 
     function setFileIndexMeta(
-            address caller,
-            string memory value
+            address         caller,
+            string memory   value
         ) public {
             address sender = msg.sender == accessControl ? caller : msg.sender;
             fileIndex[sender] = value;
@@ -104,62 +100,42 @@ contract ConfidentialWallet {
         ) public view returns (string memory) {
             return credentialIndex[account];
     }
-
-    function setCredentialIndex(
-            string memory value
-        ) public {
-            setCredentialIndexMeta(msg.sender, value);
-    }
     
     function setCredentialIndexMeta(
-            address caller,
-            string memory value
+            address         caller,
+            string memory   value
         ) public {
             address sender = msg.sender == accessControl ? caller : msg.sender;
             credentialIndex[sender] = value;
     }
 
     function getValue(
-            address account, 
-            string memory key
+            address         account, 
+            string memory   key
         ) public view returns (string memory) {
             return valueStore[account][key];
     }
-
-    function setValue(
-            string memory key, 
-            string memory value
-        ) public {
-            setValueMeta(msg.sender, key, value);
-    }
     
     function setValueMeta(
-            address caller,
-            string memory key, 
-            string memory value
+            address         caller,
+            string memory   key, 
+            string memory   value
         ) public {
             address sender = msg.sender == accessControl ? caller : msg.sender;
             valueStore[sender][key] = value;
     }
 
     function getCredentialStatus(
-            address account,
-            string memory id
+            address         account,
+            string memory   id
         ) public view returns (bool) {
             return credentialStatus[account][id];
     }
     
-    function setCredentialStatus(
-            string memory id, 
-            bool status
-        ) public {
-            setCredentialStatusMeta(msg.sender, id, status);
-    }
-
     function setCredentialStatusMeta(
-            address caller,
-            string memory id, 
-            bool status
+            address         caller,
+            string memory   id, 
+            bool            status
         ) public {
             address sender = msg.sender == accessControl ? caller : msg.sender;
             credentialStatus[sender][id] = status;
@@ -168,6 +144,7 @@ contract ConfidentialWallet {
     function privateBalanceOf(
             address vault,
             address account,
+            uint256 group_id,
             address denomination,
             address obligor
         ) 
@@ -176,23 +153,18 @@ contract ConfidentialWallet {
         returns (
             string memory
         ){  
-            return privateBalances[vault][account][denomination][obligor]; 
-    }
-
-    function setPrivateBalance(
-            address         vault,
-            address         denomination,
-            address         obligor,
-            string memory   value
-        ) 
-        public
-        {  
-            setPrivateBalanceMeta(msg.sender, vault, denomination, obligor, value);
+            console.log('vault: ', vault);
+            console.log('account: ', account);
+            console.log('group_id: ', group_id);
+            console.log('denomination: ', denomination);
+            console.log('obligor: ', obligor);
+            return privateBalances[vault][account][group_id][denomination][obligor]; 
     }
 
     function setPrivateBalanceMeta(
             address         caller,
             address         vault,
+            uint256         group_id,
             address         denomination,
             address         obligor,
             string memory   value
@@ -200,7 +172,14 @@ contract ConfidentialWallet {
         public
         {  
             address sender = msg.sender == accessControl ? caller : msg.sender;
-            privateBalances[vault][sender][denomination][obligor] = value;
+
+            console.log('vault: ', vault);
+            console.log('account: ', sender);
+            console.log('group_id: ', group_id);
+            console.log('denomination: ', denomination);
+            console.log('obligor: ', obligor);
+            
+            privateBalances[vault][sender][group_id][denomination][obligor] = value;
     }
 
     function privateAmountOf(
@@ -215,17 +194,6 @@ contract ConfidentialWallet {
             string memory
         ){  
             return privateAmounts[index][vault][account][idHash]; 
-    }
-
-    function setPrivateAmount(
-            address         vault,
-            address         account,
-            uint256         idHash,
-            string memory   value
-        ) 
-        public
-        {  
-            setPrivateAmountMeta(msg.sender, vault, account, idHash, value);
     }
 
     function setPrivateAmountMeta(

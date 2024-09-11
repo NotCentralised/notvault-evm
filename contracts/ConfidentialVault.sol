@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.1569 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.1669 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -121,12 +121,10 @@ contract ConfidentialVault {
     address paymentSignatureVerifierAddress;
     mapping (address => mapping (uint256 => mapping (address => mapping (address => uint256)))) private _hashBalances;
     
-    // mapping (address => uint256) sendNonce;
     mapping (address => mapping (uint256 => uint256)) sendNonce;
     mapping (address => mapping (uint256 => mapping (uint256 => uint256))) receiveNonce;
     
     mapping (address => mapping (uint256 => mapping (uint256 => uint256))) sendPoolIndex;
-    // mapping (address => mapping (uint256 => mapping (uint256 => mapping (uint256 => uint256)))) sendPoolIndex;
     mapping (address => mapping (uint256 => mapping (uint256 => mapping (uint256 => uint256)))) receivePoolIndex;
     
     mapping (uint256 => SendRequest) sendPool;
@@ -151,7 +149,6 @@ contract ConfidentialVault {
 
     function getSendRequestByIndex(address account, uint256 groupId, uint256 dealId, uint i, bool bySender) public view returns (SendRequest memory) {
         return sendPool[bySender ? sendPoolIndex[account][groupId][i] : receivePoolIndex[account][groupId][dealId][i]];
-        // return sendPool[bySender ? sendPoolIndex[account][groupId][dealId][i] : receivePoolIndex[account][groupId][dealId][i]];
     }
 
     function getSendRequestByID(uint256 idHash) public view returns (SendRequest memory) {
@@ -198,7 +195,7 @@ contract ConfidentialVault {
                 IERC20(denomination).transferFrom(payer_address, contract_address, amount);
             }
             else
-                ConfidentialAccessControl(accessControl).usePolicy(policy_proof);
+                ConfidentialAccessControl(accessControl).usePolicyMeta(denomination, policy_proof);
 
             _hashBalances[payer_address][group_id][denomination][obligor] = input_sender[1];
     }
@@ -207,14 +204,14 @@ contract ConfidentialVault {
         Withdraw amont from the vault by decreasing vault balance and transfering ERC20 from smart contract balance to the caller.
     */
     function withdrawMeta(
-            address         caller,
-            uint256         group_id,
-            address         denomination,
-            address         obligor,
-            uint256         amount,
-            bytes calldata  proof_sender,
-            uint[7] memory  input_sender,
-            PolicyProof memory policy_proof
+            address             caller,
+            uint256             group_id,
+            address             denomination,
+            address             obligor,
+            uint256             amount,
+            bytes calldata      proof_sender,
+            uint[7] memory      input_sender,
+            PolicyProof memory  policy_proof
         ) 
         public
         {
@@ -240,7 +237,7 @@ contract ConfidentialVault {
             if(obligor == address(0))
                 IERC20(denomination).transfer(payer_address, amount);
             else
-                ConfidentialAccessControl(accessControl).usePolicy(policy_proof);
+                ConfidentialAccessControl(accessControl).usePolicyMeta(denomination, policy_proof);
     }
 
     /*
@@ -272,12 +269,12 @@ contract ConfidentialVault {
             - agree: if this send request is linked to a deal and the necessary tokens are being locked, setting this to true will call the agree function of the deal smart contract
     */
     function createRequestMeta(
-            address caller,
-            uint256 group_id,
-            CreateRequestMessage[] memory cr,
-            SendProof memory proof,            
-            Payment memory payment,
-            bool agree
+            address                         caller,
+            uint256                         group_id,
+            CreateRequestMessage[] memory   cr,
+            SendProof memory                proof,            
+            Payment memory                  payment,
+            bool                            agree
         ) 
         public
         {
@@ -320,7 +317,6 @@ contract ConfidentialVault {
                     cr[i].unlock_sender, cr[i].unlock_receiver);
 
                 sendPoolIndex[sender][group_id][send_nonce] = idHash;
-                // sendPoolIndex[sender][group_id][deal_id][send_nonce] = idHash;
                 
                 send_nonce++;                
                 
@@ -345,10 +341,10 @@ contract ConfidentialVault {
         Accept the request linked to a hash id. A proof is necessary to change the balance of the accepting wallet.
     */
     function acceptRequestMeta(
-            address caller,
-            uint256 idHash,
-            bytes calldata proof,
-            uint[3] memory input
+            address         caller,
+            uint256         idHash,
+            bytes calldata  proof,
+            uint[3] memory  input
         )
         public
         {
@@ -367,6 +363,7 @@ contract ConfidentialVault {
             
             require(
                 sr.active && // "Transfer request is not active"
+                // _hashBalances[checkAddress][sr.deal_group_id][denomination][sr.obligor] == 0 ? (input[2] == input[1]) : (true) && // "Initial amounts don't match"
                 _hashBalances[checkAddress][sr.deal_group_id][denomination][sr.obligor] == 0 ? (input[2] == input[1]) : (_hashBalances[checkAddress][sr.deal_group_id][denomination][sr.obligor] == input[0]) && // "Initial amounts don't match"
                 amount_hash == input[2] && // "Amounts don't match"
                 (

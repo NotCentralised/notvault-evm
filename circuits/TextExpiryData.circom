@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Text Data Circuit v0.9.1569 (TextData.circom)
+ Text Data Circuit v0.9.1669 (TextData.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
