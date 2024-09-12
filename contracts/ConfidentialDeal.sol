@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Deal Contract for Solidity v0.9.1669 (ConfidentialDeal.sol)
+ Deal Contract for Solidity v0.9.1769 (ConfidentialDeal.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -220,7 +220,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, ERC721Enumerable {
         public
         {
             address sender = msg.sender == accessControl ? caller : msg.sender;
-            require(sender == minter[tokenId], "Only the counterpart can accept");
+            require(sender == minter[tokenId], "Only the owner can add payment");
             uint idxNonce = minNonce[tokenId];
             minDealIndex[tokenId][idxNonce] = idHash;
             minNonce[tokenId] = idxNonce + 1;

@@ -1,7 +1,7 @@
 pragma circom 2.0.0;
 /* 
  SPDX-License-Identifier: MIT
- Alpha Numerical Data Circuit v0.9.1669 (AlphaNumericalData.circom)
+ Alpha Numerical Data Circuit v0.9.1769 (AlphaNumericalData.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
