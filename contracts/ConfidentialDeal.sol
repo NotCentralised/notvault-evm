@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Deal Contract for Solidity v0.9.1769 (ConfidentialDeal.sol)
+ Deal Contract for Solidity v0.9.1869 (ConfidentialDeal.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.1769 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.1869 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

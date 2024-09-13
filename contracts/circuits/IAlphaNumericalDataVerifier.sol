@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Alpha Numerical Data Verifier Interface for Solidity v0.9.1769 (circuits/IAlphaNumericalDataVerifier.sol)
+ Alpha Numerical Data Verifier Interface for Solidity v0.9.1869 (circuits/IAlphaNumericalDataVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
