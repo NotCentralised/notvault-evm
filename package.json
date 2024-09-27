@@ -7,7 +7,7 @@
     "ts-node": "10.9.1"
   },
   "dependencies": {
-    "@notcentralised/notvault-sdk": "0.9.1869",
+    "@notcentralised/notvault-sdk": "0.9.1969",
     "@hashgraph/sdk": "2.25.0",
     "@metamask/eth-sig-util": "6.0.0",
     "@openzeppelin/contracts": "4.9.2",

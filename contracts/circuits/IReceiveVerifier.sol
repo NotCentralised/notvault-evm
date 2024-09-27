@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Receive Verifier Interface for Solidity v0.9.1869 (circuits/IReceiveVerifier.sol)
+ Receive Verifier Interface for Solidity v0.9.1969 (circuits/IReceiveVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
