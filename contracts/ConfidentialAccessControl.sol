@@ -128,6 +128,8 @@ contract ConfidentialAccessControl {
         
         address sender       = address(this) == msg.sender ? caller : msg.sender;
         require(policy.minSignatories >= 1, "at least one signatory");
+        require(areAddressesUnique(policy.callers), "callers must be unique");
+        require(policy.callers.length > 0, "must be atleast 1 caller");
 
         policy.counter = 0;
 
@@ -158,16 +160,20 @@ contract ConfidentialAccessControl {
                 AlphaNumericalDataVerifier(dataVerifier).requireDataProof(proof.proof, [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
             
 
-            int8 call_counter = 0;
+            uint8 call_counter = 0;
             Policy memory policy = policies[owner][proof.input[0]];
+
+            address[] memory _callers = new address[](proof.signatures.length);
             
             if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
 
-                int8 call_counter_policy = 0;
+                uint8 call_counter_policy = 0;
                 
                 for(uint j = 0; j < proof.signatures.length; j++){
                     
                     address signer = getSigner(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked((proof.proof))))), proof.signatures[j]);
+
+                    _callers[j] = signer;
 
                     for(uint k = 0; k < policy.callers.length; k++){
                         if(signer == policy.callers[k]){
@@ -176,14 +182,28 @@ contract ConfidentialAccessControl {
                         }
                     }
 
-                    require(call_counter_policy >= policy.minSignatories, "not enough signatories");
+                    require(call_counter_policy >= 1, "signer not in policy list");
                 }
                 
                 policy.counter++;
                 policies[owner][proof.input[0]] = policy;
             }
+            require(call_counter >= policy.minSignatories, "not enough signatories");
+            require(areAddressesUnique(_callers), "callers must be unique");
 
-            require(call_counter > 0, "no signatory");            
+            // require(call_counter > 0, "no signatory");            
+    }
+
+    function areAddressesUnique(address[] memory arr) public pure returns (bool) {
+        uint256 length = arr.length;
+        for (uint256 i = 0; i < length; i++) {
+            for (uint256 j = i + 1; j < length; j++) {
+                if (arr[i] == arr[j]) {
+                    return false; // Duplicate address found
+                }
+            }
+        }
+        return true; // All addresses are unique
     }
 
     function requireProof(

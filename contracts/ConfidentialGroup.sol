@@ -30,7 +30,7 @@ struct Policy {
     uint32      maxUse;
 
     address[]   callers;
-    int8        minSignatories;
+    uint8        minSignatories;
 }
 
 struct PolicyProof {
@@ -206,7 +206,7 @@ contract ConfidentialGroup {
             if(sender != owners[group_id]){
                 require(po.length > 0, "need policies");
                 
-                int8 call_counter = 0;
+                uint8 call_counter_policy = 0;
 
                 for(uint i = 0; i < po.length; i++){
                     require(po[i].input[1] == proof.input[2], "amounts don't match");
@@ -221,27 +221,21 @@ contract ConfidentialGroup {
                             AlphaNumericalDataVerifier(dataVerifier).requireDataProof(po[i].proof, [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
                         }
                         
-                        int8 call_counter_policy = 0;
-                        
                         for(uint j = 0; j < po[i].signatures.length; j++){
                             
                             address signer = getSigner(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked((po[i].proof))))), po[i].signatures[j]);
     
                             for(uint k = 0; k < policy.callers.length; k++){
                                 if(signer == policy.callers[k]){
-                                    call_counter++;
                                     call_counter_policy++;
                                 }
                             }
-
-                            require(call_counter_policy >= policy.minSignatories, "not enough signatories");
                         }
                         
                         policy.counter++;
                         policies[group_id][po[i].input[0]] = policy;
                     }
-
-                    require(call_counter > 0, "no signatory");
+                    require(call_counter_policy >= policy.minSignatories, "not enough signatories");
                 }
             }
 
