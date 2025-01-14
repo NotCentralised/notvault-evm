@@ -24,6 +24,29 @@ const encrypt = async (pk_to: string, message: any) => {
 // BTC        : Gas = 1,793,039
 
 
+// API KEY
+// test1
+// Client ID: dd7e333c-8e56-4d1e-8a2c-bd041aa68696
+// Value: XtS8Q~IGq6dtczp9Xqt3KjTTLYbQuFmIFWLxpaeD
+// Secret ID: f54199ac-23ef-4a89-81af-ef4c1a152f7a
+
+
+// main
+// Client ID: b5b76856-e0b5-4093-b5cb-765ed78b48b0
+// Value: ask8Q~Nrx.EYvuxTnwyM29yG6HvGfDYcAI3JhcX6
+// Secret ID: c9b53b9b-5e9f-4648-bee7-ff9bc9182a25
+
+
+// azure-function: api-gateway
+// Client ID: dd7e333c-8e56-4d1e-8a2c-bd041aa68696
+// Secret ID: af69fda9-52fb-41c1-862c-8d4a537c2a95
+// Secret: Wsu8Q~HNK1i3AG-8h9fuHBaUvbkAZwyeZkT7IaFV
+
+// spa-auth: api-gateway
+// Client ID: 93f3fe31-4175-4953-a686-0253cf563b2e
+// Secret ID: c986e68d-e0de-4cd4-b8d5-c5996f14b835
+// Secret: zUm8Q~oSkz1wOo5mulpjGBPOwUG2ZF8JvY.KzaCc
+
 const main = async () => {
 
   let start = Date.now();
@@ -75,7 +98,7 @@ const main = async () => {
   console.log('Deployed HashLibraryContract: ', hashLibraryContract.target);
 
   const WalletFactory = await ethers.getContractFactory("ConfidentialWallet");
-  const VaultFactory = await ethers.getContractFactory("ConfidentialVault", { libraries: { PoseidonT2: hashLibraryContract.target } });
+  const VaultFactory = await ethers.getContractFactory("ConfidentialVault");
   const DealFactory = await ethers.getContractFactory("ConfidentialDeal");
   const OracleFactory = await ethers.getContractFactory("ConfidentialOracle");
   const ServiceBusFactory = await ethers.getContractFactory("ConfidentialServiceBus");
@@ -83,6 +106,11 @@ const main = async () => {
   console.log('Deploying Access Control')
   const accessControlFactory = await ethers.getContractFactory("ConfidentialAccessControl");
   const accessControl = await accessControlFactory.connect(owner).deploy(policyContract.target, alphaNumericalContract.target, hashApproverContract.target);
+
+  const VaultUtilFactory = await ethers.getContractFactory("VaultUtils", { libraries: { PoseidonT2: hashLibraryContract.target } });
+  const vaultUtilsContract = await VaultUtilFactory.connect(owner).deploy(accessControl.target, hashSenderContract.target, hashReceiverContract.target, paymentSignatureContract.target);
+  console.log('Deployed VaultUtilsContract: ', vaultUtilsContract.target);
+
 
   console.log('Deploying Group')
   const groupFactory = await ethers.getContractFactory("ConfidentialGroup");
@@ -105,7 +133,7 @@ const main = async () => {
   await walletContract.connect(owner).registerKeys(_owner.publicKey, encryptedPrivateKey, encryptedSecret, hashedEmail, encryptedEmail);
   // await walletContract.connect(owner).registerKeys(_owner.publicKey, encryptedPrivateKey, encryptedSecret, hashedEmail, encryptedEmail, {gasLimit: 2n**20n-1n });
   
-  const vaultContract = await VaultFactory.connect(owner).deploy(hashSenderContract.target, hashReceiverContract.target, paymentSignatureContract.target, accessControl.target, groupContract.target);
+  const vaultContract = await VaultFactory.connect(owner).deploy(accessControl.target, groupContract.target, vaultUtilsContract.target);
   // const vaultContract = await VaultFactory.connect(owner).deploy(hashSenderContract.target, hashReceiverContract.target, {gasLimit: 2n**20n-1n });
   console.log('Deployed VaultFactory: ', vaultContract.target);
   
@@ -158,6 +186,23 @@ const main = async () => {
   console.log("USDC: ", usdcContract.target);
   console.log("CASH: ", cashContract.target);
   console.log("SHADOW: ", shadowContract.target);
+  
+
+  // const add = '0x574D1135a10E91006eC937eFD2b29FC5B99F18a0';
+
+  // await usdcContract.connect(owner).approve(add, 10_000n);
+  // await usdcContract.connect(owner).transfer(add, 10_000n);
+
+  // await usdcContract.connect(owner).approve('0xad63a911B28419939c605B46F63a1a49B54F7643', 10_000n); // TENANT
+  // await usdcContract.connect(owner).transfer('0xad63a911B28419939c605B46F63a1a49B54F7643', 10_000n); // TENANT
+
+  // const tx = {
+  //   to: add,
+  //   value: ethers.parseEther("100.0"),
+  // };
+  // const transaction = await owner.sendTransaction(tx);
+  // console.log("Transaction sent: ", transaction);
+  // const receipt = await transaction.wait();
 }
 
 // We recommend this pattern to be able to use async/await everywhere

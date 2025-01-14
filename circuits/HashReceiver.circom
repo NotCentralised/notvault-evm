@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Hash Receiver Circuit v0.9.1969 (HashReceiver.circom)
+ Hash Receiver Circuit v0.9.2069 (HashReceiver.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -37,7 +37,7 @@ template HashReceiver () {
     comp1.in[1] <== 0;
     comp1.out === 1;
 
-    // Generate has of the amount
+    // Generate hash of the amount
     component hashAmount = Poseidon(1);
     hashAmount.inputs[0] <== amount;
     amountHash <== hashAmount.out;

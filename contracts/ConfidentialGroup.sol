@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Group Contract for Solidity v0.9.1969 (ConfidentialGroup.sol)
+ Group Contract for Solidity v0.9.2069 (ConfidentialGroup.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -21,6 +21,8 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./ConfidentialVault.sol";
 import "./circuits/IPolicyVerifier.sol";
 import "./circuits/IAlphaNumericalDataVerifier.sol";
+
+import "./utils/VaultUtils.sol";
 
 struct Policy {
     string      policy_type;

@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Access Control Contract for Solidity v0.9.1969 (ConfidentialAccessControl.sol)
+ Access Control Contract for Solidity v0.9.2069 (ConfidentialAccessControl.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

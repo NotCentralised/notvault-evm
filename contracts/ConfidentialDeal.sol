@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Deal Contract for Solidity v0.9.1969 (ConfidentialDeal.sol)
+ Deal Contract for Solidity v0.9.2069 (ConfidentialDeal.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -25,6 +25,8 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./ConfidentialVault.sol";
 import "./circuits/IPaymentSignatureVerifier.sol";
+
+import "./utils/VaultUtils.sol";
 
 contract ConfidentialDeal is ERC721, ERC721URIStorage, ERC721Enumerable {
     using Counters for Counters.Counter;
