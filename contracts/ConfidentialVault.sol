@@ -17,13 +17,14 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./ConfidentialDeal.sol";
 import "./ConfidentialAccessControl.sol";
 
-import "./utils/VaultUtils.sol";
+import "./utils/Vault.sol";
 
-contract ConfidentialVault {
+contract ConfidentialVault is ReentrancyGuard {
     
     /* 
         General description of custom functionality
@@ -109,14 +110,14 @@ contract ConfidentialVault {
         uint[3] memory input_sender,
         PolicyProof memory policy_proof
     )
-    public {
+    public nonReentrant {
         if(group_id > 0)
             require(group == msg.sender, "only group can call");
         
         address payer_address = accessControl == msg.sender ? caller : msg.sender;
         address contract_address = address(this);
 
-        VaultUtils(vaultUtilsAddress).checkDeposit(
+        Vault(vaultUtilsAddress).checkDeposit(
             CheckDeposit(
                 payer_address,
                 contract_address,
@@ -149,14 +150,14 @@ contract ConfidentialVault {
         uint[7] memory      input_sender,
         PolicyProof memory  policy_proof
     ) 
-    public {
+    public nonReentrant {
         if(group_id > 0)
             require(group == msg.sender, "only group can call");
         
         address payer_address       = accessControl == msg.sender ? caller : msg.sender;
         address contract_address    = address(this);
 
-        VaultUtils(vaultUtilsAddress).checkWithdraw(
+        Vault(vaultUtilsAddress).checkWithdraw(
             CheckWidraw(
                 proof_sender, 
                 input_sender,
@@ -212,7 +213,7 @@ contract ConfidentialVault {
         SendProof memory                proof,            
         Payment memory                  payment,
         bool                            agree
-    ) public {
+    ) public nonReentrant {
         address sender  = accessControl == msg.sender ? caller : msg.sender;
 
         if(group_id > 0){
@@ -223,7 +224,7 @@ contract ConfidentialVault {
         uint256 deal_id = payment.deal_id;
         address denomination = payment.denomination;
             
-        VaultUtils(vaultUtilsAddress).checkSend(
+        Vault(vaultUtilsAddress).checkSend(
             proof, 
             sendNonce[sender][group_id], 
             _hashBalances[sender][group_id][denomination][payment.obligor], 
@@ -235,7 +236,7 @@ contract ConfidentialVault {
 
         for(uint i = 0; i < cr.length; i++){
 
-            uint256 idHash = VaultUtils(vaultUtilsAddress).getHash(cr[i], proof, i);
+            uint256 idHash = Vault(vaultUtilsAddress).getHash(cr[i], proof, i);
 
             sendPool[idHash] = SendRequest(
                 idHash, sender, group_id,
@@ -276,7 +277,7 @@ contract ConfidentialVault {
         uint256         idHash,
         bytes calldata  proof,
         uint[3] memory  input
-    ) public {
+    ) public nonReentrant {
         address receiver  = accessControl == msg.sender ? caller : msg.sender;
 
         SendRequest memory sr = sendPool[idHash];
@@ -289,7 +290,7 @@ contract ConfidentialVault {
 
         address checkAddress = sr.sender == receiver ? receiver : (deal_id != 0 ? IERC721(sr.deal_address).ownerOf(deal_id) : sr.deal_address);
 
-        VaultUtils(vaultUtilsAddress).checkAccept(
+        Vault(vaultUtilsAddress).checkAccept(
             receiver,
             group,
             sr,

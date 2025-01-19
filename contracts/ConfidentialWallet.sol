@@ -65,147 +65,147 @@ contract ConfidentialWallet {
     }
 
     function registerKeys(
-            string memory publicKey, 
-            string memory encryptedPrivateKey, 
-            string memory encryptedSecret, 
-            string memory contactId, 
-            string memory encContactId
-        ) public {
-            address account = msg.sender;
-            publicKeys[account] = publicKey;
-            encryptedPrivateKeys[account] = encryptedPrivateKey;
-            encryptedSecrets[account] = encryptedSecret;
+        string memory publicKey, 
+        string memory encryptedPrivateKey, 
+        string memory encryptedSecret, 
+        string memory contactId, 
+        string memory encContactId
+    ) public {
+        address account = msg.sender;
+        publicKeys[account] = publicKey;
+        encryptedPrivateKeys[account] = encryptedPrivateKey;
+        encryptedSecrets[account] = encryptedSecret;
 
-            hashedContactId[account] = contactId;
-            encryptedContactId[account] = encContactId;
-            hashedContactIdReverse[contactId] = account;
+        hashedContactId[account] = contactId;
+        encryptedContactId[account] = encContactId;
+        hashedContactIdReverse[contactId] = account;
     }
 
     function getFileIndex(
-            address         account
-        ) public view returns (string memory) {
-            return fileIndex[account];
+        address         account
+    ) public view returns (string memory) {
+        return fileIndex[account];
     }
 
     function setFileIndexMeta(
-            address         caller,
-            string memory   value
-        ) public {
-            address sender = msg.sender == accessControl ? caller : msg.sender;
-            fileIndex[sender] = value;
+        address         caller,
+        string memory   value
+    ) public {
+        address sender = msg.sender == accessControl ? caller : msg.sender;
+        fileIndex[sender] = value;
     }
 
     function getCredentialIndex(
-            address account
-        ) public view returns (string memory) {
-            return credentialIndex[account];
+        address account
+    ) public view returns (string memory) {
+        return credentialIndex[account];
     }
     
     function setCredentialIndexMeta(
-            address         caller,
-            string memory   value
-        ) public {
-            address sender = msg.sender == accessControl ? caller : msg.sender;
-            credentialIndex[sender] = value;
+        address         caller,
+        string memory   value
+    ) public {
+        address sender = msg.sender == accessControl ? caller : msg.sender;
+        credentialIndex[sender] = value;
     }
 
     function getValue(
-            address         account, 
-            string memory   key
-        ) public view returns (string memory) {
-            return valueStore[account][key];
+        address         account, 
+        string memory   key
+    ) public view returns (string memory) {
+        return valueStore[account][key];
     }
     
     function setValueMeta(
-            address         caller,
-            string memory   key, 
-            string memory   value
-        ) public {
-            address sender = msg.sender == accessControl ? caller : msg.sender;
-            valueStore[sender][key] = value;
+        address         caller,
+        string memory   key, 
+        string memory   value
+    ) public {
+        address sender = msg.sender == accessControl ? caller : msg.sender;
+        valueStore[sender][key] = value;
     }
 
     function getCredentialStatus(
-            address         account,
-            string memory   id
-        ) public view returns (bool) {
-            return credentialStatus[account][id];
+        address         account,
+        string memory   id
+    ) public view returns (bool) {
+        return credentialStatus[account][id];
     }
     
     function setCredentialStatusMeta(
-            address         caller,
-            string memory   id, 
-            bool            status
-        ) public {
-            address sender = msg.sender == accessControl ? caller : msg.sender;
-            credentialStatus[sender][id] = status;
+        address         caller,
+        string memory   id, 
+        bool            status
+    ) public {
+        address sender = msg.sender == accessControl ? caller : msg.sender;
+        credentialStatus[sender][id] = status;
     }
 
     function privateBalanceOf(
-            address vault,
-            address account,
-            uint256 group_id,
-            address denomination,
-            address obligor
-        ) 
-        public 
-        view 
-        returns (
-            string memory
-        ){  
-            console.log('vault: ', vault);
-            console.log('account: ', account);
-            console.log('group_id: ', group_id);
-            console.log('denomination: ', denomination);
-            console.log('obligor: ', obligor);
-            return privateBalances[vault][account][group_id][denomination][obligor]; 
+        address vault,
+        address account,
+        uint256 group_id,
+        address denomination,
+        address obligor
+    ) 
+    public 
+    view 
+    returns (
+        string memory
+    ){  
+        console.log('vault: ', vault);
+        console.log('account: ', account);
+        console.log('group_id: ', group_id);
+        console.log('denomination: ', denomination);
+        console.log('obligor: ', obligor);
+        return privateBalances[vault][account][group_id][denomination][obligor]; 
     }
 
     function setPrivateBalanceMeta(
-            address         caller,
-            address         vault,
-            uint256         group_id,
-            address         denomination,
-            address         obligor,
-            string memory   value
-        ) 
-        public
-        {  
-            address sender = msg.sender == accessControl ? caller : msg.sender;
+        address         caller,
+        address         vault,
+        uint256         group_id,
+        address         denomination,
+        address         obligor,
+        string memory   value
+    ) 
+    public
+    {  
+        address sender = msg.sender == accessControl ? caller : msg.sender;
 
-            console.log('vault: ', vault);
-            console.log('account: ', sender);
-            console.log('group_id: ', group_id);
-            console.log('denomination: ', denomination);
-            console.log('obligor: ', obligor);
-            
-            privateBalances[vault][sender][group_id][denomination][obligor] = value;
+        console.log('vault: ', vault);
+        console.log('account: ', sender);
+        console.log('group_id: ', group_id);
+        console.log('denomination: ', denomination);
+        console.log('obligor: ', obligor);
+        
+        privateBalances[vault][sender][group_id][denomination][obligor] = value;
     }
 
     function privateAmountOf(
-            address index,
-            address vault,
-            address account,
-            uint256 idHash
-        ) 
-        public 
-        view 
-        returns (
-            string memory
-        ){  
-            return privateAmounts[index][vault][account][idHash]; 
+        address index,
+        address vault,
+        address account,
+        uint256 idHash
+    ) 
+    public 
+    view 
+    returns (
+        string memory
+    ){  
+        return privateAmounts[index][vault][account][idHash]; 
     }
 
     function setPrivateAmountMeta(
-            address         caller,
-            address         vault,
-            address         account,
-            uint256         idHash,
-            string memory   value
-        ) 
-        public
-        {  
-            address sender = msg.sender == accessControl ? caller : msg.sender;
-            privateAmounts[sender][vault][account][idHash] = value;
+        address         caller,
+        address         vault,
+        address         account,
+        uint256         idHash,
+        string memory   value
+    ) 
+    public
+    {  
+        address sender = msg.sender == accessControl ? caller : msg.sender;
+        privateAmounts[sender][vault][account][idHash] = value;
     }
 }

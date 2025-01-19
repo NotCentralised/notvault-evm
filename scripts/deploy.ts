@@ -107,9 +107,9 @@ const main = async () => {
   const accessControlFactory = await ethers.getContractFactory("ConfidentialAccessControl");
   const accessControl = await accessControlFactory.connect(owner).deploy(policyContract.target, alphaNumericalContract.target, hashApproverContract.target);
 
-  const VaultUtilFactory = await ethers.getContractFactory("VaultUtils", { libraries: { PoseidonT2: hashLibraryContract.target } });
+  const VaultUtilFactory = await ethers.getContractFactory("Vault", { libraries: { PoseidonT2: hashLibraryContract.target } });
   const vaultUtilsContract = await VaultUtilFactory.connect(owner).deploy(accessControl.target, hashSenderContract.target, hashReceiverContract.target, paymentSignatureContract.target);
-  console.log('Deployed VaultUtilsContract: ', vaultUtilsContract.target);
+  console.log('Deployed VaultContract: ', vaultUtilsContract.target);
 
 
   console.log('Deploying Group')

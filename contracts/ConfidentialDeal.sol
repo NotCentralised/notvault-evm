@@ -22,13 +22,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./ConfidentialVault.sol";
 import "./circuits/IPaymentSignatureVerifier.sol";
 
-import "./utils/VaultUtils.sol";
+import "./utils/Vault.sol";
 
-contract ConfidentialDeal is ERC721, ERC721URIStorage, ERC721Enumerable {
+contract ConfidentialDeal is ReentrancyGuard, ERC721, ERC721URIStorage, ERC721Enumerable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
 
@@ -118,7 +119,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, ERC721Enumerable {
         The owner calls the mint function to create a new  representation of an agreemenet. 
         The owner must specify the counterpart, the ZK hash and expiry of the deal.
     */
-    function safeMintMeta(address caller, address counterpart, string memory uri, uint32 expiry) public returns (uint256) {
+    function safeMintMeta(address caller, address counterpart, string memory uri, uint32 expiry) public nonReentrant returns (uint256) {
         require(expiry > block.timestamp, "expiry must be in the future");
         address owner = msg.sender == accessControl ? caller : msg.sender;
         uint256 tokenId = _tokenIdCounter.current();
@@ -202,7 +203,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, ERC721Enumerable {
             uint256 tokenId,
             uint256 idHash
         )
-        public
+        public nonReentrant
         {
             address sender = msg.sender == accessControl ? caller : msg.sender;
             require(sender == confidentialVaultAddress, "Only the vault contract can add");
@@ -219,7 +220,7 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, ERC721Enumerable {
             uint256 tokenId,
             uint256 idHash
         )
-        public
+        public nonReentrant
         {
             address sender = msg.sender == accessControl ? caller : msg.sender;
             require(sender == minter[tokenId], "Only the owner can add payment");
@@ -232,57 +233,57 @@ contract ConfidentialDeal is ERC721, ERC721URIStorage, ERC721Enumerable {
         Counterpart accepts the agreement. This can only happen if the required payments have been committed previously.
     */
     function acceptMeta(address caller, uint256 tokenId)
-        public
-        {
-            address sender = msg.sender == accessControl ? caller : msg.sender;
-            require(((sender == confidentialVaultAddress) || (sender == counterparts[tokenId])), "only the minter or owner can accept");
-            require(expiryTime[tokenId] > block.timestamp, "deal cannot have expired when accepting");
-            require(acceptedTime[tokenId] == 0, "deal has already been accepted");
-            
-            require(minNonce[tokenId] == dealNonce[tokenId], "nonce don't match");
-            for(uint i = 0; i < minNonce[tokenId]; i++){
-                SendRequest memory srs = ConfidentialVault(confidentialVaultAddress).getSendRequestByID(sendDealIndex[tokenId][i]);
-                require(srs.idHash == minDealIndex[tokenId][i],"Payments don't match");
-            }
-            
-            acceptedTime[tokenId] = uint32(block.timestamp);
+    public nonReentrant
+    {
+        address sender = msg.sender == accessControl ? caller : msg.sender;
+        require(((sender == confidentialVaultAddress) || (sender == counterparts[tokenId])), "only the minter or owner can accept");
+        require(expiryTime[tokenId] > block.timestamp, "deal cannot have expired when accepting");
+        require(acceptedTime[tokenId] == 0, "deal has already been accepted");
+        
+        require(minNonce[tokenId] == dealNonce[tokenId], "nonce don't match");
+        for(uint i = 0; i < minNonce[tokenId]; i++){
+            SendRequest memory srs = ConfidentialVault(confidentialVaultAddress).getSendRequestByID(sendDealIndex[tokenId][i]);
+            require(srs.idHash == minDealIndex[tokenId][i],"Payments don't match");
+        }
+        
+        acceptedTime[tokenId] = uint32(block.timestamp);
     }
 
     /* 
         Both the owner and counterpart can cancel the agreement.
     */
     function cancelMeta(
-            address caller,
-            uint256 tokenId
-        )
-        public
-        {
-            
-            address sender = msg.sender == accessControl ? caller : msg.sender;
+        address caller,
+        uint256 tokenId
+    )
+    public nonReentrant
+    {
+        
+        address sender = msg.sender == accessControl ? caller : msg.sender;
 
-            require((sender == this.ownerOf(tokenId) || (sender == counterparts[tokenId]) || sender == minter[tokenId]), "only the minter or owner can cancel");
-            require(expiryTime[tokenId] > block.timestamp, "deal cannot have expired when accepting");
-            
-            if(sender == this.ownerOf(tokenId)) { // counterpart
-                cancelledOwner[tokenId] = uint32(block.timestamp);
-            }
-            else {
-                cancelledCounterpart[tokenId] = uint32(block.timestamp);
-            }
+        require((sender == this.ownerOf(tokenId) || (sender == counterparts[tokenId]) || sender == minter[tokenId]), "only the minter or owner can cancel");
+        require(expiryTime[tokenId] > block.timestamp, "deal cannot have expired when accepting");
+        
+        if(sender == this.ownerOf(tokenId)) { // counterpart
+            cancelledOwner[tokenId] = uint32(block.timestamp);
+        }
+        else {
+            cancelledCounterpart[tokenId] = uint32(block.timestamp);
+        }
     }    
 
-    // function tokensOfOwner(address owner) external view returns (uint256[] memory) {
-    //     uint256 tokenCount = balanceOf(owner);
+    function tokensOfOwner(address owner) external view returns (uint256[] memory) {
+        uint256 tokenCount = balanceOf(owner);
 
-    //     if (tokenCount == 0) {
-    //         // Return an empty array if the owner has no tokens
-    //         return new uint256[](0);
-    //     } else {
-    //         uint256[] memory tokens = new uint256[](tokenCount);
-    //         for (uint256 i = 0; i < tokenCount; i++) {
-    //             tokens[i] = tokenOfOwnerByIndex(owner, i);
-    //         }
-    //         return tokens;
-    //     }
-    // }
+        if (tokenCount == 0) {
+            // Return an empty array if the owner has no tokens
+            return new uint256[](0);
+        } else {
+            uint256[] memory tokens = new uint256[](tokenCount);
+            for (uint256 i = 0; i < tokenCount; i++) {
+                tokens[i] = tokenOfOwnerByIndex(owner, i);
+            }
+            return tokens;
+        }
+    }
 }

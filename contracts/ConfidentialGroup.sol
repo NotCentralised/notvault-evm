@@ -22,7 +22,7 @@ import "./ConfidentialVault.sol";
 import "./circuits/IPolicyVerifier.sol";
 import "./circuits/IAlphaNumericalDataVerifier.sol";
 
-import "./utils/VaultUtils.sol";
+import "./utils/Vault.sol";
 
 struct Policy {
     string      policy_type;

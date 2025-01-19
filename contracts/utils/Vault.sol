@@ -81,8 +81,8 @@ struct Payment {
 }
 
 struct CheckWidraw {
-    bytes      proof_sender;
-    uint[7]      input_sender;
+    bytes   proof_sender;
+    uint[7] input_sender;
     address contract_address;
     address payer_address;
     address denomination;
@@ -108,7 +108,7 @@ struct CheckDeposit {
     PolicyProof policy_proof;
 }
 
-contract VaultUtils {
+contract Vault {
     address immutable accessControl;
     address immutable sendVerifier;
     address immutable receiveVerifier;
@@ -157,14 +157,6 @@ contract VaultUtils {
         require(ck.balance == ck.input_sender[0], "initial balances don't match");
         require(ck.payer_address != address(0) && ck.denomination != address(0), "payer_address cannot be null");
         require(ck.obligor == address(0) ? 0 < ck.amount && ck.amount <= IERC20(ck.denomination).balanceOf(ck.contract_address) : true, "amount must be less than or equal to contract balance");
-                        
-        // require(
-        //     PoseidonT2.hash([ck.amount]) == ck.input_sender[2] && // "incorrect amount"
-        //     ck.input_sender[3] == ck.sendNonce && // "Nonce don't match"
-        //     ck.balance == ck.input_sender[0] && // "initial balances don't match"
-        //     ck.payer_address != address(0) && ck.denomination != address(0) && // "payer_address cannot be null"
-        //     ck.obligor == address(0) ? 0 < ck.amount && ck.amount <= IERC20(ck.denomination).balanceOf(ck.contract_address) : true // "amount must be less than or equal to contract balance"
-        //     , "withdraw: setup error");
     }
 
     function checkSend(
@@ -181,13 +173,6 @@ contract VaultUtils {
         require(balance == proof.input[0], "initial balances don't match");
         require(PoseidonT2.hash([length]) == proof.input[6], "incorrect count");
         require(deal_id != 0 ? ConfidentialDeal(payment.deal_address).getDealByID(deal_id).expiry > block.timestamp : true, "deal cannot have expired when making a payment");
-
-        // require(
-        //         proof.input[3] == sendNonce && // "Nonce don't match"
-        //         balance == proof.input[0] && // "initial balances don't match"
-        //         PoseidonT2.hash([length]) == proof.input[6] && // "incorrect count"
-        //         deal_id != 0 ? ConfidentialDeal(payment.deal_address).getDealByID(deal_id).expiry > block.timestamp : true // "deal cannot have expired when making a payment"
-        //     ,"create: setup error");
     }
 
     function checkAccept(
@@ -214,19 +199,6 @@ contract VaultUtils {
                 : 
                 (sr.deal_address == receiver || sr.sender == receiver || group == receiver)
             ),  "You are not the owner");
-
-        // require(
-        //     sr.active && // "Transfer request is not active"
-        //     hashBalance == 0 ? (input[2] == input[1]) : (hashBalance == input[0]) && // "Initial amounts don't match"
-        //     amount_hash == input[2] && // "Amounts don't match"
-        //     (
-        //         deal_id != 0 ? 
-        //         (IERC721(sr.deal_address).ownerOf(deal_id) == receiver || sr.sender == receiver || group == receiver)
-        //         : 
-        //         (sr.deal_address == receiver || sr.sender == receiver || group == receiver)
-        //     ) //  "You are not the owner"
-        //     ,"accept: setup error");
-
         
         if(receiver == sr.sender) {
             require(sr.unlock_sender < block.timestamp, "sender unlock time is in the future");
