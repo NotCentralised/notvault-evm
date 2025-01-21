@@ -15,10 +15,14 @@
 
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 import "./ConfidentialVault.sol";
 import "./ConfidentialGroup.sol";
 import "./ConfidentialWallet.sol";
 import "./circuits/IApproverVerifier.sol";
+
+import "hardhat/console.sol";
 
 struct Meta {
     address userAddress;
@@ -28,7 +32,7 @@ struct Meta {
     bytes   signature;
 }
 
-contract ConfidentialAccessControl {
+contract ConfidentialAccessControl is ReentrancyGuard {
 
     address private policyVerifier;
     address private dataVerifier;
@@ -47,34 +51,35 @@ contract ConfidentialAccessControl {
     */
     function executeMultiMetaTransaction(
         Meta[] memory meta
-        ) public payable returns (bytes[] memory) {
+    ) public payable returns (bytes[] memory) {
 
-            uint256 chainId;
-            assembly {
-                chainId := chainid()
-            }
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
 
-            bytes[] memory res = new bytes[](meta.length);
+        bytes[] memory res = new bytes[](meta.length);
 
-            for(uint i = 0; i < meta.length; i++){
-                require(meta[i].userAddress == getSigner(meta[i].message, meta[i].signature), "Signer and signature do not match");
-                require(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(meta[i].functionSignature)))) == meta[i].message, "function not hash");
+        for(uint i = 0; i < meta.length; i++){
+            require(meta[i].userAddress == getSigner(meta[i].message, meta[i].signature), "Signer and signature do not match");
+            require(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(meta[i].functionSignature)))) == meta[i].message, "function not hash");
 
-                (bool success, bytes memory result) = meta[i].contractAddress.call(meta[i].functionSignature);
-                if (!success) {
-                    if (result.length > 0) {
-                        assembly {
-                            let returndata_size := mload(result)
-                            revert(add(32, result), returndata_size)
-                        }
-                    } else {
-                        revert("Function call not successful and no error message returned");
+            (bool success, bytes memory result) = meta[i].contractAddress.call(meta[i].functionSignature);
+            if (!success) {
+                console.log("META ERROR: %s",  meta[i].contractAddress);
+                if (result.length > 0) {
+                    assembly {
+                        let returndata_size := mload(result)
+                        revert(add(32, result), returndata_size)
                     }
+                } else {
+                    revert(string(abi.encodePacked("Function call not successful and no error message returned: ", meta[i].contractAddress)));
                 }
-
-                res[i] = result;
             }
-            return res;
+
+            res[i] = result;
+        }
+        return res;
     }
 
     /*
@@ -110,7 +115,7 @@ contract ConfidentialAccessControl {
     /*
         Add the treasurer secret
     */
-    function addSecret(address caller, bytes calldata proof, uint[2] memory input) public {
+    function addSecret(address caller, bytes calldata proof, uint[2] memory input) public nonReentrant {
         address sender       = address(this) == msg.sender ? caller : msg.sender;
 
         requireProof(proof, input);
@@ -124,7 +129,7 @@ contract ConfidentialAccessControl {
     /*
         Add a policy
     */
-    function addPolicyMeta(address caller, uint256 policy_id, Policy memory policy) public {
+    function addPolicyMeta(address caller, uint256 policy_id, Policy memory policy) public nonReentrant {
         
         address sender       = address(this) == msg.sender ? caller : msg.sender;
         require(policy.minSignatories >= 1, "at least one signatory");
@@ -142,56 +147,54 @@ contract ConfidentialAccessControl {
         Use a policy
     */
     function usePolicyMeta(
-            address owner, 
-            PolicyProof memory proof
-        ) 
-        public
-        {
-            if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("secret"))){
-                requireProof(proof.proof, [proof.input[0], proof.input[1]]);
+        address owner, 
+        PolicyProof memory proof
+    ) 
+    public nonReentrant
+    {
+        if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("secret"))){
+            requireProof(proof.proof, [proof.input[0], proof.input[1]]);
 
-                require(secrets[owner][proof.input[1]] == proof.input[0], "secret's don't match");
-                return;
-            }
-            else if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("transfer")))
-                PolicyVerifier(policyVerifier).requirePolicyProof(proof.proof, [proof.input[0], proof.input[1]]);
+            require(secrets[owner][proof.input[1]] == proof.input[0], "secret's don't match");
+            return;
+        }
+        else if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("transfer")))
+            PolicyVerifier(policyVerifier).requirePolicyProof(proof.proof, [proof.input[0], proof.input[1]]);
+        
+        else
+            AlphaNumericalDataVerifier(dataVerifier).requireDataProof(proof.proof, [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
+        
+
+        uint8 call_counter = 0;
+        Policy memory policy = policies[owner][proof.input[0]];
+
+        address[] memory _callers = new address[](proof.signatures.length);
+        
+        if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
+
+            uint8 call_counter_policy = 0;
             
-            else
-                AlphaNumericalDataVerifier(dataVerifier).requireDataProof(proof.proof, [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
-            
-
-            uint8 call_counter = 0;
-            Policy memory policy = policies[owner][proof.input[0]];
-
-            address[] memory _callers = new address[](proof.signatures.length);
-            
-            if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
-
-                uint8 call_counter_policy = 0;
+            for(uint j = 0; j < proof.signatures.length; j++){
                 
-                for(uint j = 0; j < proof.signatures.length; j++){
-                    
-                    address signer = getSigner(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked((proof.proof))))), proof.signatures[j]);
+                address signer = getSigner(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked((proof.proof))))), proof.signatures[j]);
 
-                    _callers[j] = signer;
+                _callers[j] = signer;
 
-                    for(uint k = 0; k < policy.callers.length; k++){
-                        if(signer == policy.callers[k]){
-                            call_counter++;
-                            call_counter_policy++;
-                        }
+                for(uint k = 0; k < policy.callers.length; k++){
+                    if(signer == policy.callers[k]){
+                        call_counter++;
+                        call_counter_policy++;
                     }
-
-                    require(call_counter_policy >= 1, "signer not in policy list");
                 }
-                
-                policy.counter++;
-                policies[owner][proof.input[0]] = policy;
-            }
-            require(call_counter >= policy.minSignatories, "not enough signatories");
-            require(areAddressesUnique(_callers), "callers must be unique");
 
-            // require(call_counter > 0, "no signatory");            
+                require(call_counter_policy >= 1, "signer not in policy list");
+            }
+            
+            policy.counter++;
+            policies[owner][proof.input[0]] = policy;
+        }
+        require(call_counter >= policy.minSignatories, "not enough signatories");
+        require(areAddressesUnique(_callers), "callers must be unique");       
     }
 
     function areAddressesUnique(address[] memory arr) public pure returns (bool) {

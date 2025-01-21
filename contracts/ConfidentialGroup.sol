@@ -15,6 +15,8 @@
 
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
@@ -32,7 +34,7 @@ struct Policy {
     uint32      maxUse;
 
     address[]   callers;
-    uint8        minSignatories;
+    uint8       minSignatories;
 }
 
 struct PolicyProof {
@@ -42,7 +44,7 @@ struct PolicyProof {
     bytes[]     signatures;
 }
 
-contract ConfidentialGroup {
+contract ConfidentialGroup is ReentrancyGuard {
     /* 
         General description of custom functionality
 
@@ -127,7 +129,7 @@ contract ConfidentialGroup {
         The list of members and the list of ids must contain the same number of elements because each member is linked to an id.
         If an id is larger then 0, the membership of the group is linked to the owner of an Deal NFT identified by the id.
     */
-    function registerGroupMeta(address caller, address[] memory _members, uint256[] memory _ids) public returns (uint256) {
+    function registerGroupMeta(address caller, address[] memory _members, uint256[] memory _ids) public nonReentrant returns (uint256) {
         address sender  = accessControl == msg.sender ? caller : msg.sender;
 
         require(_members.length == _ids.length, "owner and id length must be the same");
@@ -151,7 +153,7 @@ contract ConfidentialGroup {
     /*
         The the address of the group wallet.
     */
-    function setGroupWallet(address caller, uint256 group_id, address groupWallet) public {
+    function setGroupWallet(address caller, uint256 group_id, address groupWallet) public nonReentrant {
         address sender  = accessControl == msg.sender ? caller : msg.sender;
 
         require(sender == owners[group_id], "only the owner can set wallet");
@@ -162,7 +164,7 @@ contract ConfidentialGroup {
     /*
         Add a policy
     */
-    function addPolicyMeta(address caller, uint256 group_id, uint256 policy_id, Policy memory policy) public {
+    function addPolicyMeta(address caller, uint256 group_id, uint256 policy_id, Policy memory policy) public nonReentrant {
         address sender  = accessControl == msg.sender ? caller : msg.sender;
 
         require(sender == owners[group_id], "only the owner can add policy");
@@ -200,7 +202,7 @@ contract ConfidentialGroup {
             Payment memory payment,
             bool agree
         ) 
-        public
+        public nonReentrant
         {
             address sender  = accessControl == msg.sender ? caller : msg.sender;
 
@@ -255,7 +257,7 @@ contract ConfidentialGroup {
             bytes calldata proof,
             uint[3] memory input
         )
-        public
+        public nonReentrant
         {
             address sender  = accessControl == msg.sender ? caller : msg.sender;
             require(hasAccess(sender, group_id), "caller has no access to group");

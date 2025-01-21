@@ -16,6 +16,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./circuits/IReceiveVerifier.sol";
 import "./circuits/ISendVerifier.sol";
@@ -23,7 +24,7 @@ import "./ConfidentialVault.sol";
 
 import "hardhat/console.sol";
 
-contract ConfidentialWallet {
+contract ConfidentialWallet is ReentrancyGuard {
     mapping (address => string)                     publicKeys;
     mapping (address => string)                     private encryptedPrivateKeys;
     mapping (address => string)                     private encryptedSecrets;
@@ -70,7 +71,7 @@ contract ConfidentialWallet {
         string memory encryptedSecret, 
         string memory contactId, 
         string memory encContactId
-    ) public {
+    ) public nonReentrant {
         address account = msg.sender;
         publicKeys[account] = publicKey;
         encryptedPrivateKeys[account] = encryptedPrivateKey;
@@ -90,7 +91,7 @@ contract ConfidentialWallet {
     function setFileIndexMeta(
         address         caller,
         string memory   value
-    ) public {
+    ) public nonReentrant {
         address sender = msg.sender == accessControl ? caller : msg.sender;
         fileIndex[sender] = value;
     }
@@ -104,7 +105,7 @@ contract ConfidentialWallet {
     function setCredentialIndexMeta(
         address         caller,
         string memory   value
-    ) public {
+    ) public nonReentrant {
         address sender = msg.sender == accessControl ? caller : msg.sender;
         credentialIndex[sender] = value;
     }
@@ -120,7 +121,7 @@ contract ConfidentialWallet {
         address         caller,
         string memory   key, 
         string memory   value
-    ) public {
+    ) public nonReentrant {
         address sender = msg.sender == accessControl ? caller : msg.sender;
         valueStore[sender][key] = value;
     }
@@ -136,7 +137,7 @@ contract ConfidentialWallet {
         address         caller,
         string memory   id, 
         bool            status
-    ) public {
+    ) public nonReentrant {
         address sender = msg.sender == accessControl ? caller : msg.sender;
         credentialStatus[sender][id] = status;
     }
@@ -169,7 +170,7 @@ contract ConfidentialWallet {
         address         obligor,
         string memory   value
     ) 
-    public
+    public nonReentrant
     {  
         address sender = msg.sender == accessControl ? caller : msg.sender;
 
@@ -203,7 +204,7 @@ contract ConfidentialWallet {
         uint256         idHash,
         string memory   value
     ) 
-    public
+    public nonReentrant
     {  
         address sender = msg.sender == accessControl ? caller : msg.sender;
         privateAmounts[sender][vault][account][idHash] = value;

@@ -36,6 +36,10 @@ const REDBELLY_TESTNET_PRIVATE_KEY: string | undefined = process.env.REDBELLY_TE
 const REDBELLY_TESTNET_PRIVATE_KEY_0: string | undefined = process.env.REDBELLY_TESTNET_PRIVATE_KEY_0;
 const REDBELLY_TESTNET_PRIVATE_KEY_1: string | undefined = process.env.REDBELLY_TESTNET_PRIVATE_KEY_1;
 
+const REDBELLY_MAINNET_PRIVATE_KEY: string | undefined = process.env.REDBELLY_MAINNET_PRIVATE_KEY;
+const REDBELLY_MAINNET_PRIVATE_KEY_0: string | undefined = process.env.REDBELLY_MAINNET_PRIVATE_KEY_0;
+const REDBELLY_MAINNET_PRIVATE_KEY_1: string | undefined = process.env.REDBELLY_MAINNET_PRIVATE_KEY_1;
+
 if (!GOERLI_PRIVATE_KEY || !GOERLI_PRIVATE_KEY_0 || !GOERLI_PRIVATE_KEY_1) {
   throw new Error("Please set your GOERLI_PRIVATE_KEY in a .env file");
 }
@@ -53,6 +57,9 @@ if (!BASE_GOERLI_PRIVATE_KEY || !BASE_GOERLI_PRIVATE_KEY_0 || !BASE_GOERLI_PRIVA
 }
 if (!REDBELLY_TESTNET_PRIVATE_KEY || !REDBELLY_TESTNET_PRIVATE_KEY_0 || !REDBELLY_TESTNET_PRIVATE_KEY_1) {
   throw new Error("Please set your REDBELLY_TESTNET_PRIVATE_KEY in a .env file");
+}
+if (!REDBELLY_MAINNET_PRIVATE_KEY || !REDBELLY_MAINNET_PRIVATE_KEY_0 || !REDBELLY_MAINNET_PRIVATE_KEY_1) {
+  throw new Error("Please set your REDBELLY_MAINNET_PRIVATE_KEY in a .env file");
 }
 
 const config: HardhatUserConfig = {
@@ -92,9 +99,14 @@ const config: HardhatUserConfig = {
       url: `https://goerli.base.org`,
       accounts: [BASE_GOERLI_PRIVATE_KEY, BASE_GOERLI_PRIVATE_KEY_0, BASE_GOERLI_PRIVATE_KEY_1],
     },
+
     redbelly_testnet: {
       url: `https://governors.testnet.redbelly.network`,
       accounts: [REDBELLY_TESTNET_PRIVATE_KEY, REDBELLY_TESTNET_PRIVATE_KEY_0, REDBELLY_TESTNET_PRIVATE_KEY_1],
+    },
+    redbelly_mainnet: {
+      url: `https://governors.mainnet.redbelly.network/`,
+      accounts: [REDBELLY_MAINNET_PRIVATE_KEY, REDBELLY_MAINNET_PRIVATE_KEY_0, REDBELLY_MAINNET_PRIVATE_KEY_1],
     },
   },
   contractSizer: {

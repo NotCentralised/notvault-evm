@@ -14,9 +14,11 @@
 */
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 import "./circuits/IApproverVerifier.sol";
 
-contract ConfidentialOracle {
+contract ConfidentialOracle is ReentrancyGuard {
     /* 
         General description of custom functionality
 
@@ -58,7 +60,7 @@ contract ConfidentialOracle {
             bytes calldata proof,
             uint[2] memory input
         )
-        public
+        public nonReentrant
         {
             address sender = msg.sender == accessControl ? caller : msg.sender;
 

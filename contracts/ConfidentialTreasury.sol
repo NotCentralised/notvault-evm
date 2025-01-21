@@ -4,9 +4,12 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+
 import "./ConfidentialAccessControl.sol";
 
-contract ConfidentialTreasury is ERC20 {
+contract ConfidentialTreasury is ERC20, ReentrancyGuard {
 
     /* 
         General description of custom functionality
@@ -33,7 +36,7 @@ contract ConfidentialTreasury is ERC20 {
     /*
         Add the secret
     */
-    function addSecretMeta(address caller, bytes calldata proof, uint[2] memory input) public {
+    function addSecretMeta(address caller, bytes calldata proof, uint[2] memory input) public nonReentrant {
         address sender       = address(this) == msg.sender ? caller : msg.sender;
         require(owner == sender, "only owner can add secret");
 
@@ -43,7 +46,7 @@ contract ConfidentialTreasury is ERC20 {
     /*
         Add a policy
     */
-    function addPolicyMeta(address caller, uint256 policy_id, Policy memory policy) public {
+    function addPolicyMeta(address caller, uint256 policy_id, Policy memory policy) public nonReentrant {
 
         address sender       = address(this) == msg.sender ? caller : msg.sender;
         require(owner == sender, "only owner can add policy");
@@ -52,31 +55,31 @@ contract ConfidentialTreasury is ERC20 {
     }
 
     function approveMeta(
-            address             caller,
-            address             destination,
-            uint256             amount
-        ) public {
-            address sender = accessControl == msg.sender ? caller : msg.sender;
-            _approve(sender, destination, amount);
+        address             caller,
+        address             destination,
+        uint256             amount
+    ) public nonReentrant {
+        address sender = accessControl == msg.sender ? caller : msg.sender;
+        _approve(sender, destination, amount);
     }
 
     function mintMeta(
-            address             caller,
-            uint256             amount,
-            PolicyProof memory  policy_proof
-        ) public {
-            address sender = accessControl == msg.sender ? caller : msg.sender;
-            ConfidentialAccessControl(accessControl).usePolicyMeta(address(this), policy_proof);
-            _mint(sender, amount);
+        address             caller,
+        uint256             amount,
+        PolicyProof memory  policy_proof
+    ) public nonReentrant {
+        address sender = accessControl == msg.sender ? caller : msg.sender;
+        ConfidentialAccessControl(accessControl).usePolicyMeta(address(this), policy_proof);
+        _mint(sender, amount);
     }
 
     function burnMeta(
-            address             caller,
-            uint256             amount,
-            PolicyProof memory  policy_proof
-        ) public {
-            address sender = accessControl == msg.sender ? caller : msg.sender;
-            ConfidentialAccessControl(accessControl).usePolicyMeta(address(this), policy_proof);
-            _burn(sender, amount);
+        address             caller,
+        uint256             amount,
+        PolicyProof memory  policy_proof
+    ) public nonReentrant {
+        address sender = accessControl == msg.sender ? caller : msg.sender;
+        ConfidentialAccessControl(accessControl).usePolicyMeta(address(this), policy_proof);
+        _burn(sender, amount);
     }
 }

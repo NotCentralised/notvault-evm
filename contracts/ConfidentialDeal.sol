@@ -123,6 +123,7 @@ contract ConfidentialDeal is ReentrancyGuard, ERC721, ERC721URIStorage, ERC721En
         require(expiry > block.timestamp, "expiry must be in the future");
         address owner = msg.sender == accessControl ? caller : msg.sender;
         uint256 tokenId = _tokenIdCounter.current();
+        
         _tokenIdCounter.increment();
         _safeMint(owner, tokenId);
         _setTokenURI(tokenId, uri);
@@ -134,30 +135,29 @@ contract ConfidentialDeal is ReentrancyGuard, ERC721, ERC721URIStorage, ERC721En
         minter[tokenId] = owner;
         expiryTime[tokenId] = expiry;
         counterparts[tokenId] = counterpart;
-
         createdTime[tokenId] = uint32(block.timestamp);
-        
+
         return tokenId;
     }
 
     function getDealByID(
-            uint256 tokenId
-        ) 
-        public view 
-        returns (
-            DealStruct memory
-        ) {
+        uint256 tokenId
+    ) 
+    public view 
+    returns (
+        DealStruct memory
+    ) {
 
         return DealStruct(tokenId, counterparts[tokenId], this.ownerOf(tokenId), super.tokenURI(tokenId), createdTime[tokenId], cancelledOwner[tokenId], cancelledCounterpart[tokenId], acceptedTime[tokenId], expiryTime[tokenId]);
     }
 
     function getDealByOwner(
-            address owner
-        ) 
-        public view 
-        returns (
-            DealStruct[] memory
-        ) {
+        address owner
+    ) 
+    public view 
+    returns (
+        DealStruct[] memory
+    ) {
             uint256 tokenCount = balanceOf(owner);
             DealStruct[] memory srs = new DealStruct[](tokenCount);
             for(uint i = 0; i < tokenCount; i++){
@@ -167,12 +167,12 @@ contract ConfidentialDeal is ReentrancyGuard, ERC721, ERC721URIStorage, ERC721En
     }
 
     function getDealByCounterpart(
-            address counterpart
-        ) 
-        public view 
-        returns (
-            DealStruct[] memory
-        ) {
+        address counterpart
+    ) 
+    public view 
+    returns (
+        DealStruct[] memory
+    ) {
         DealStruct[] memory srs = new DealStruct[](counterPartNonce[counterpart]);
         for(uint i = 0; i < counterPartNonce[counterpart]; i++){
             uint256 idx = counterPartPoolIndex[counterpart][i];
@@ -182,51 +182,51 @@ contract ConfidentialDeal is ReentrancyGuard, ERC721, ERC721URIStorage, ERC721En
     }
 
     function getSendRequestByDeal(
-            uint256 tokenId
-        ) 
-        public view 
-        returns (
-            SendRequest[] memory
-        ) {
-            SendRequest[] memory srs = new SendRequest[](dealNonce[tokenId]);
-            for(uint i = 0; i < dealNonce[tokenId]; i++){
-                srs[i] = ConfidentialVault(confidentialVaultAddress).getSendRequestByID(sendDealIndex[tokenId][i]);
-            }
-            return srs;
+        uint256 tokenId
+    ) 
+    public view 
+    returns (
+        SendRequest[] memory
+    ) {
+        SendRequest[] memory srs = new SendRequest[](dealNonce[tokenId]);
+        for(uint i = 0; i < dealNonce[tokenId]; i++){
+            srs[i] = ConfidentialVault(confidentialVaultAddress).getSendRequestByID(sendDealIndex[tokenId][i]);
+        }
+        return srs;
     }
 
     /*
         Programmed payments linked to the deal are registered with the Deal NFT. The payments are identified with the idHash.
     */
     function addSendRequestMeta(
-            address caller,
-            uint256 tokenId,
-            uint256 idHash
-        )
-        public nonReentrant
-        {
-            address sender = msg.sender == accessControl ? caller : msg.sender;
-            require(sender == confidentialVaultAddress, "Only the vault contract can add");
-            uint idxNonce = dealNonce[tokenId];
-            sendDealIndex[tokenId][idxNonce] = idHash;
-            dealNonce[tokenId] = idxNonce + 1;
+        address caller,
+        uint256 tokenId,
+        uint256 idHash
+    )
+    public nonReentrant
+    {
+        address sender = msg.sender == accessControl ? caller : msg.sender;
+        require(sender == confidentialVaultAddress, "Only the vault contract can add");
+        uint idxNonce = dealNonce[tokenId];
+        sendDealIndex[tokenId][idxNonce] = idHash;
+        dealNonce[tokenId] = idxNonce + 1;
     }
 
     /*
         Prior to the Deal NFT being agreed to by the counterpart, the owner can preprogram payments requiring them to be committed by the counterpart prior to agreement.
     */
     function addPaymentMeta(
-            address caller,
-            uint256 tokenId,
-            uint256 idHash
-        )
-        public nonReentrant
-        {
-            address sender = msg.sender == accessControl ? caller : msg.sender;
-            require(sender == minter[tokenId], "Only the owner can add payment");
-            uint idxNonce = minNonce[tokenId];
-            minDealIndex[tokenId][idxNonce] = idHash;
-            minNonce[tokenId] = idxNonce + 1;
+        address caller,
+        uint256 tokenId,
+        uint256 idHash
+    )
+    public nonReentrant
+    {
+        address sender = msg.sender == accessControl ? caller : msg.sender;
+        require(sender == minter[tokenId], "Only the owner can add payment");
+        uint idxNonce = minNonce[tokenId];
+        minDealIndex[tokenId][idxNonce] = idHash;
+        minNonce[tokenId] = idxNonce + 1;
     }
 
     /*
