@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Access Control Contract for Solidity v0.9.9069 (ConfidentialAccessControl.sol)
+ Access Control Contract for Solidity v0.9.9969 (ConfidentialAccessControl.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -22,12 +22,15 @@ import "./ConfidentialGroup.sol";
 import "./ConfidentialWallet.sol";
 import "./circuits/IApproverVerifier.sol";
 
+import "hardhat/console.sol";
+
 struct Meta {
     address userAddress;
     address contractAddress;
     bytes   functionSignature;
     bytes32 message;
     bytes   signature;
+    uint256 value;
 }
 
 contract ConfidentialAccessControl is ReentrancyGuard {
@@ -51,6 +54,8 @@ contract ConfidentialAccessControl is ReentrancyGuard {
         Meta[] memory meta
     ) public payable returns (bytes[] memory) {
 
+        console.log("RECEIVED: ", msg.value);
+
         uint256 chainId;
         assembly {
             chainId := chainid()
@@ -62,7 +67,9 @@ contract ConfidentialAccessControl is ReentrancyGuard {
             require(meta[i].userAddress == getSigner(meta[i].message, meta[i].signature), "Signer and signature do not match");
             require(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(meta[i].functionSignature)))) == meta[i].message, "function not hash");
 
-            (bool success, bytes memory result) = meta[i].contractAddress.call(meta[i].functionSignature);
+            console.log("ADDRESS: ", meta[i].contractAddress);
+            console.log("VALUE: ", meta[i].value);
+            (bool success, bytes memory result) = meta[i].contractAddress.call{value: meta[i].value}(meta[i].functionSignature);
             if (!success) {
             
                 if (result.length > 0) {
@@ -168,7 +175,6 @@ contract ConfidentialAccessControl is ReentrancyGuard {
                 [[p[2], p[3]], [p[4], p[5]]],
                 [p[6], p[7]], 
                 [proof.input[0], proof.input[1]]);
-            // PolicyVerifier(policyVerifier).requirePolicyProof(proof.proof, [proof.input[0], proof.input[1]]);
         }
         
         else {
@@ -178,7 +184,6 @@ contract ConfidentialAccessControl is ReentrancyGuard {
                 [[p[2], p[3]], [p[4], p[5]]],
                 [p[6], p[7]], 
                 [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
-            // AlphaNumericalDataVerifier(dataVerifier).requireDataProof(proof.proof, [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
         }
         
 

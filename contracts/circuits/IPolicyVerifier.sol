@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- MinCommitment Interface for Solidity v0.9.9069 (circuits/IMinCommitmentVerifier.sol)
+ MinCommitment Interface for Solidity v0.9.9969 (circuits/IMinCommitmentVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -22,9 +22,4 @@ interface PolicyVerifier {
             uint[2] memory c,
             uint[2] memory input
         ) external view returns (bool r);
-
-    // function requirePolicyProof(
-    //         bytes memory _proof,
-    //         uint[2] memory input
-    //     ) external view;
 }

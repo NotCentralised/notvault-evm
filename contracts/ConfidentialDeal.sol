@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Deal Contract for Solidity v0.9.9069 (ConfidentialDeal.sol)
+ Deal Contract for Solidity v0.9.9969 (ConfidentialDeal.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -26,22 +26,27 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./ConfidentialVault.sol";
 import "./circuits/IPaymentSignatureVerifier.sol";
+import "./DAOTreasury.sol";
 
 import "./utils/Vault.sol";
+
 
 contract ConfidentialDeal is ReentrancyGuard, ERC721, ERC721URIStorage, ERC721Enumerable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
 
-    address confidentialVaultAddress;
-    address paymentSignatureVerifierAddress;
+    address immutable confidentialVaultAddress;
+    address immutable paymentSignatureVerifierAddress;
 
-    address accessControl;
+    address immutable accessControl;
 
-    constructor(string memory name, string memory symbol, address vaultAddress, address verifierAddress, address _accessControl) ERC721(name, symbol) { 
+    address payable immutable daoTreasury;
+
+    constructor(string memory name, string memory symbol, address vaultAddress, address verifierAddress, address _accessControl, address payable _daoTreasury) ERC721(name, symbol) { 
         confidentialVaultAddress = vaultAddress;
         paymentSignatureVerifierAddress = verifierAddress;
         accessControl = _accessControl;
+        daoTreasury = _daoTreasury;
         _tokenIdCounter.increment();
     }
 
@@ -115,11 +120,18 @@ contract ConfidentialDeal is ReentrancyGuard, ERC721, ERC721URIStorage, ERC721En
     mapping (uint256 => uint256)                        minNonce;
     mapping (uint256 => mapping (uint256 => uint256))   minDealIndex;
 
+
     /*
         The owner calls the mint function to create a new  representation of an agreemenet. 
         The owner must specify the counterpart, the ZK hash and expiry of the deal.
     */
-    function safeMintMeta(address caller, address counterpart, string memory uri, uint32 expiry) public nonReentrant returns (uint256) {
+    function safeMintMeta(address caller, address counterpart, string memory uri, uint32 expiry) public payable nonReentrant returns (uint256) {
+
+        // Check if the transferred amount is equal to the required amount
+        require(msg.value >= DAOTreasury(daoTreasury).getMintFee(), "Incorrect Mint Fee sent");
+        (bool sent, ) = daoTreasury.call{value: msg.value}("");
+        require(sent, "Failed to send Ether to treasury");
+
         require(expiry > block.timestamp, "expiry must be in the future");
         address owner = msg.sender == accessControl ? caller : msg.sender;
         uint256 tokenId = _tokenIdCounter.current();
@@ -269,21 +281,6 @@ contract ConfidentialDeal is ReentrancyGuard, ERC721, ERC721URIStorage, ERC721En
         }
         else {
             cancelledCounterpart[tokenId] = uint32(block.timestamp);
-        }
-    }    
-
-    function tokensOfOwner(address owner) external view returns (uint256[] memory) {
-        uint256 tokenCount = balanceOf(owner);
-
-        if (tokenCount == 0) {
-            // Return an empty array if the owner has no tokens
-            return new uint256[](0);
-        } else {
-            uint256[] memory tokens = new uint256[](tokenCount);
-            for (uint256 i = 0; i < tokenCount; i++) {
-                tokens[i] = tokenOfOwnerByIndex(owner, i);
-            }
-            return tokens;
         }
     }
 }

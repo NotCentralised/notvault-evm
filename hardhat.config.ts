@@ -105,7 +105,7 @@ const config: HardhatUserConfig = {
       accounts: [REDBELLY_TESTNET_PRIVATE_KEY, REDBELLY_TESTNET_PRIVATE_KEY_0, REDBELLY_TESTNET_PRIVATE_KEY_1],
     },
     redbelly_mainnet: {
-      url: `https://governors.mainnet.redbelly.network/`,
+      url: `https://governors.mainnet.redbelly.network`,
       accounts: [REDBELLY_MAINNET_PRIVATE_KEY, REDBELLY_MAINNET_PRIVATE_KEY_0, REDBELLY_MAINNET_PRIVATE_KEY_1],
     },
   },

@@ -1,4 +1,4 @@
-import { ethers, config } from "hardhat";
+import { ethers } from "hardhat";
 import { metaMaskEncrypt, encryptedBySecret, genApproverProof, textToBigInt, strToFeltArr } from './utils';
 
 import * as EthCrypto from "eth-crypto";
@@ -75,10 +75,21 @@ const main = async () => {
   const vaultUtilsContract = await VaultUtilFactory.connect(owner).deploy(accessControl.target, hashSenderContract.target, hashReceiverContract.target, paymentSignatureContract.target);
   console.log('Deployed VaultContract: ', vaultUtilsContract.target);
 
+  const mintFee     = BigInt(0.1 * 10**18);
+  const registerFee = BigInt(0.1 * 10**18);
+  const depositFee  = BigInt(0.1 * 10**18);
+  const withdrawFee = BigInt(0.1 * 10**18);
+  const sendFee     = BigInt(0.1 * 10**18);
+  const acceptFee   = BigInt(0.1 * 10**18);
+
+  console.log('Deploying Group')
+  const daoFactory = await ethers.getContractFactory("DAOTreasury");
+  const daoContract = await daoFactory.connect(owner).deploy(mintFee, registerFee, depositFee, withdrawFee, sendFee, acceptFee);
+  console.log('Deployed DAOFactory: ', daoContract.target);
 
   console.log('Deploying Group')
   const groupFactory = await ethers.getContractFactory("ConfidentialGroup");
-  const groupContract = await groupFactory.connect(owner).deploy(policyContract.target, alphaNumericalContract.target, accessControl.target);
+  const groupContract = await groupFactory.connect(owner).deploy(policyContract.target, alphaNumericalContract.target, accessControl.target, daoContract.target);
   console.log('Deployed GroupFactory: ', groupContract.target);
 
   
@@ -96,10 +107,10 @@ const main = async () => {
   let hashedEmail = EthCrypto.hash.keccak256(process.env.OWNER_EMAIL ?? '');      
   await walletContract.connect(owner).registerKeys(_owner.publicKey, encryptedPrivateKey, encryptedSecret, hashedEmail, encryptedEmail);
   
-  const vaultContract = await VaultFactory.connect(owner).deploy(accessControl.target, groupContract.target, vaultUtilsContract.target);
+  const vaultContract = await VaultFactory.connect(owner).deploy(accessControl.target, groupContract.target, vaultUtilsContract.target, daoContract.target);
   console.log('Deployed VaultFactory: ', vaultContract.target);
   
-  const dealContract = await DealFactory.connect(owner).deploy("ConfidentialDeal", "Deal", vaultContract.target, paymentSignatureContract.target, accessControl.target);
+  const dealContract = await DealFactory.connect(owner).deploy("ConfidentialDeal", "Deal", vaultContract.target, paymentSignatureContract.target, accessControl.target, daoContract.target);
 
   console.log('Deployed DealFactory: ', dealContract.target);
   
@@ -126,17 +137,18 @@ const main = async () => {
   const proof_shadow = await genApproverProof({key: shadowContract.target, value: textToBigInt(shut_secret), salt: strToFeltArr('0') });
 
   console.log('Adding HUT treasurer');
-  const tx_cash_secret = await cashContract.connect(owner).addSecretMeta(owner.address, proof_cash.solidityProof, proof_cash.inputs, {gasLimit: 2747885 });
+  const tx_cash_secret = await cashContract.connect(owner).addSecretMeta(owner.address, proof_cash.solidityProof, proof_cash.inputs, { gasLimit: 30_000_000 });
   console.log("tx_cash_secret: ", tx_cash_secret);
 
   console.log('Adding sHUT treasurer');
-  const tx_shadow_secret = await shadowContract.connect(owner).addSecretMeta(owner.address, proof_shadow.solidityProof, proof_shadow.inputs, {gasLimit: 2747885 });
+  const tx_shadow_secret = await shadowContract.connect(owner).addSecretMeta(owner.address, proof_shadow.solidityProof, proof_shadow.inputs, { gasLimit: 30_000_000 });
   console.log("tx_shadow_secret: ", tx_shadow_secret);
   
 
   console.log('Deployed Done')
 
 
+  console.log("DAO: ", daoContract.target);
   console.log("AccessControl: ", accessControl.target);
   console.log("Wallet: ", walletContract.target);
   console.log("Vault: ", vaultContract.target);

@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Group Contract for Solidity v0.9.9069 (ConfidentialGroup.sol)
+ Group Contract for Solidity v0.9.9969 (ConfidentialGroup.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -23,6 +23,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./ConfidentialVault.sol";
 import "./circuits/IPolicyVerifier.sol";
 import "./circuits/IAlphaNumericalDataVerifier.sol";
+import "./DAOTreasury.sol";
 
 import "./utils/Vault.sol";
 
@@ -81,14 +82,18 @@ contract ConfidentialGroup is ReentrancyGuard {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIdCounter;
 
-    address private policyVerifier;
-    address private dataVerifier;
+    address immutable policyVerifier;
+    address immutable dataVerifier;
 
-    address private accessControl;
-    constructor(address _policyVerifier, address _dataVerifier, address _accessControl) { 
+    address immutable accessControl;
+
+    address payable immutable daoTreasury;
+
+    constructor(address _policyVerifier, address _dataVerifier, address _accessControl, address payable _daoTreasury) { 
         policyVerifier = _policyVerifier; 
         accessControl = _accessControl; 
         dataVerifier = _dataVerifier;
+        daoTreasury = _daoTreasury;
         _tokenIdCounter.increment();
     }
 
@@ -134,8 +139,12 @@ contract ConfidentialGroup is ReentrancyGuard {
         The list of members and the list of ids must contain the same number of elements because each member is linked to an id.
         If an id is larger then 0, the membership of the group is linked to the owner of an Deal NFT identified by the id.
     */
-    // function registerGroupMeta(address caller, address[] memory _members, uint256[] memory _ids) public nonReentrant returns (uint256) {
-    function registerGroupMeta(address caller, Member[] memory _members) public nonReentrant returns (uint256) {
+    function registerGroupMeta(address caller, Member[] memory _members) public payable nonReentrant returns (uint256) {
+        // Check if the transferred amount is equal to the required amount
+        require(msg.value >= DAOTreasury(daoTreasury).getRegisterFee(), "Incorrect Ether amount sent");
+        (bool sent, ) = daoTreasury.call{value: msg.value}("");
+        require(sent, "Failed to send Ether to treasury");
+
         address sender  = accessControl == msg.sender ? caller : msg.sender;
 
         uint256 group_id = _tokenIdCounter.current();
@@ -205,7 +214,7 @@ contract ConfidentialGroup is ReentrancyGuard {
         Payment memory payment,
         bool agree
     ) 
-    public nonReentrant
+    public payable nonReentrant
     {
         address sender  = accessControl == msg.sender ? caller : msg.sender;
 
@@ -230,8 +239,6 @@ contract ConfidentialGroup is ReentrancyGuard {
                             [p[6], p[7]],
                             [po[i].input[0], po[i].input[1]]
                         );
-
-                        // PolicyVerifier(policyVerifier).requirePolicyProof(po[i].proof, [po[i].input[0], po[i].input[1]]);
                     }
                     else{
                         uint256[8] memory p = abi.decode(po[i].proof, (uint256[8]));
@@ -240,7 +247,6 @@ contract ConfidentialGroup is ReentrancyGuard {
                             [[p[2], p[3]], [p[4], p[5]]],
                             [p[6], p[7]],
                             [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
-                        // AlphaNumericalDataVerifier(dataVerifier).requireDataProof(po[i].proof, [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
                     }
                     
                     for(uint j = 0; j < po[i].signatures.length; j++){
@@ -268,7 +274,7 @@ contract ConfidentialGroup is ReentrancyGuard {
             }
         }
 
-        ConfidentialVault(vault).createRequestMeta(groupWallets[group_id], group_id, cr, proof, payment, agree);
+        ConfidentialVault(vault).createRequestMeta{value: msg.value}(groupWallets[group_id], group_id, cr, proof, payment, agree);
     }
 
     /*
@@ -282,12 +288,12 @@ contract ConfidentialGroup is ReentrancyGuard {
         bytes calldata proof,
         uint[3] memory input
     )
-    public nonReentrant
+    public payable nonReentrant
     {
         address sender  = accessControl == msg.sender ? caller : msg.sender;
         require(hasAccess(sender, group_id), "caller has no access to group");
         
-        ConfidentialVault(vault).acceptRequestMeta(groupWallets[group_id], idHash, proof, input);
+        ConfidentialVault(vault).acceptRequestMeta{value: msg.value}(groupWallets[group_id], idHash, proof, input);
     }
 
     function hasAccess(address sender, uint256 group_id) internal view returns (bool){

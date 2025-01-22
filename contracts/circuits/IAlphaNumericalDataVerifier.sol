@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Alpha Numerical Data Verifier Interface for Solidity v0.9.9069 (circuits/IAlphaNumericalDataVerifier.sol)
+ Alpha Numerical Data Verifier Interface for Solidity v0.9.9969 (circuits/IAlphaNumericalDataVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -22,9 +22,4 @@ interface AlphaNumericalDataVerifier {
             uint[2] memory c,
             uint[6] memory input
         ) external view returns (bool r);
-
-    // function requireDataProof(
-    //         bytes memory _proof,
-    //         uint[6] memory input
-    //     ) external view;
 }

@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.9069 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.9969 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -72,16 +72,20 @@ contract ConfidentialVault is ReentrancyGuard {
 
     address immutable accessControl;
     address immutable group;
+
+    address payable immutable daoTreasury;
     
     constructor(
         address _accessControl,
         address _group,
-        address _vaultUtilsAddress
+        address _vaultUtilsAddress,
+        address payable _daoTreasury
     )
     {
         accessControl = _accessControl;
         group = _group;
         vaultUtilsAddress = _vaultUtilsAddress;
+        daoTreasury = _daoTreasury;
     }
 
     function getSendRequestByIndex(address account, uint256 groupId, uint256 dealId, uint i, bool bySender) public view returns (SendRequest memory) {
@@ -110,17 +114,24 @@ contract ConfidentialVault is ReentrancyGuard {
         uint[3] memory input_sender,
         PolicyProof memory policy_proof
     )
-    public nonReentrant {
+    public payable nonReentrant {
+
+        // Check if the transferred amount is equal to the required amount
+        require(msg.value >=  DAOTreasury(daoTreasury).getDepositFee(), "Incorrect Deposit Fee sent");
+        (bool sent, ) = daoTreasury.call{value: msg.value}("");
+        require(sent, "Failed to send Ether to treasury");
+
+
         if(group_id > 0)
             require(group == msg.sender, "only group can call");
         
         address payer_address = accessControl == msg.sender ? caller : msg.sender;
-        address contract_address = address(this);
+        // address contract_address = address(this);
 
         Vault(vaultUtilsAddress).checkDeposit(
             CheckDeposit(
                 payer_address,
-                contract_address,
+                address(this),
 
                 amount,
                 _hashBalances[payer_address][group_id][denomination][obligor],
@@ -134,8 +145,8 @@ contract ConfidentialVault is ReentrancyGuard {
         );
 
         if(obligor == address(0)){
-            require(amount <= IERC20(denomination).allowance(payer_address, contract_address), "Not Enough Allowance");
-            IERC20(denomination).transferFrom(payer_address, contract_address, amount);
+            require(amount <= IERC20(denomination).allowance(payer_address, address(this)), "Not Enough Allowance");
+            IERC20(denomination).transferFrom(payer_address, address(this), amount);
         }
         else
             ConfidentialAccessControl(accessControl).usePolicyMeta(denomination, policy_proof);
@@ -156,18 +167,25 @@ contract ConfidentialVault is ReentrancyGuard {
         uint[7] memory      input_sender,
         PolicyProof memory  policy_proof
     ) 
-    public nonReentrant {
+    public payable nonReentrant {
+
+        // Check if the transferred amount is equal to the required amount
+        require(msg.value >=  DAOTreasury(daoTreasury).getWithdrawFee(), "Incorrect Withdraw Fee sent");
+        (bool sent, ) = daoTreasury.call{value: msg.value}("");
+        require(sent, "Failed to send Ether to treasury");
+
+
         if(group_id > 0)
             require(group == msg.sender, "only group can call");
         
         address payer_address       = accessControl == msg.sender ? caller : msg.sender;
-        address contract_address    = address(this);
+        // address contract_address    = address(this);
 
         Vault(vaultUtilsAddress).checkWithdraw(
             CheckWidraw(
                 proof_sender, 
                 input_sender,
-                contract_address,
+                address(this),
                 payer_address,
                 denomination,
                 obligor,
@@ -219,7 +237,14 @@ contract ConfidentialVault is ReentrancyGuard {
         SendProof memory                proof,            
         Payment memory                  payment,
         bool                            agree
-    ) public nonReentrant {
+    ) public payable nonReentrant {
+
+        // Check if the transferred amount is equal to the required amount
+        require(msg.value >=  DAOTreasury(daoTreasury).getSendFee(), "Incorrect Send Fee sent");
+        (bool sent, ) = daoTreasury.call{value: msg.value}("");
+        require(sent, "Failed to send Ether to treasury");
+
+
         address sender  = accessControl == msg.sender ? caller : msg.sender;
 
         if(group_id > 0){
@@ -283,7 +308,14 @@ contract ConfidentialVault is ReentrancyGuard {
         uint256         idHash,
         bytes calldata  proof,
         uint[3] memory  input
-    ) public nonReentrant {
+    ) public payable nonReentrant {
+
+        // Check if the transferred amount is equal to the required amount
+        require(msg.value >=  DAOTreasury(daoTreasury).getAcceptFee(), "Incorrect Accept Fee sent");
+        (bool sent, ) = daoTreasury.call{value: msg.value}("");
+        require(sent, "Failed to send Ether to treasury");
+
+
         address receiver  = accessControl == msg.sender ? caller : msg.sender;
 
         SendRequest memory sr = sendPool[idHash];
@@ -314,89 +346,4 @@ contract ConfidentialVault is ReentrancyGuard {
 
         _hashBalances[checkAddress][sr.deal_group_id][denomination][sr.obligor] = input[1];
     }
-
-    // AlphaNumericalDataVerifier.sol
-    // function requireDataProof(
-    //     bytes memory _proof,
-    //     uint[6] memory input
-    // ) public view {
-    //     uint256[8] memory p = abi.decode(_proof, (uint256[8]));
-    //     require(
-    //         verifyProof(
-    //             [p[0], p[1]],
-    //             [[p[2], p[3]], [p[4], p[5]]],
-    //             [p[6], p[7]],
-    //             input
-    //     ),
-    //     "Invalid policy (ZK)"
-    //     );
-    // }
-
-    // HashApproverVerifier.sol
-    // function requirePolicyProof(
-    //     bytes memory _proof,
-    //     uint[3] memory input
-    // ) public view {
-    //     uint256[8] memory p = abi.decode(_proof, (uint256[8]));
-    //     require(
-    //         verifyProof(
-    //             [p[0], p[1]],
-    //             [[p[2], p[3]], [p[4], p[5]]],
-    //             [p[6], p[7]],
-    //             input
-    //     ),
-    //     "Invalid policy (ZK)"
-    //     );
-    // }
-
-    // HashSenderVerifier.sol
-    // function requireSenderProof(
-    //         bytes memory _proof,
-    //         uint[7] memory input
-    //     ) public view {
-    //         uint256[8] memory p = abi.decode(_proof, (uint256[8]));
-    //         require(
-    //             verifyProof(
-    //                 [p[0], p[1]],
-    //                 [[p[2], p[3]], [p[4], p[5]]],
-    //                 [p[6], p[7]],
-    //                 input
-    //         ),
-    //         "Invalid sender (ZK)"
-    //         );
-    // }
-
-    // HashReceiverVerifier.sol
-    // function requireReceiverProof(
-    //         bytes memory _proof,
-    //         uint[3] memory input
-    //     ) public view {
-    //         uint256[8] memory p = abi.decode(_proof, (uint256[8]));
-    //         require(
-    //             verifyProof(
-    //                 [p[0], p[1]],
-    //                 [[p[2], p[3]], [p[4], p[5]]],
-    //                 [p[6], p[7]],
-    //                 input
-    //         ),
-    //         "Invalid receiver (ZK)"
-    //         );
-    // }
-
-    // HashPaymentSignatureVerifier.sol
-    // function requireSignatureProof(
-    //         bytes memory _proof,
-    //         uint[2] memory input
-    //     ) public view {
-    //         uint256[8] memory p = abi.decode(_proof, (uint256[8]));
-    //         require(
-    //             verifyProof(
-    //                 [p[0], p[1]],
-    //                 [[p[2], p[3]], [p[4], p[5]]],
-    //                 [p[6], p[7]],
-    //                 input
-    //         ),
-    //         "Invalid signature (ZK)"
-    //         );
-    // }
 }

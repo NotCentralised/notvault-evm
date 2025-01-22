@@ -179,20 +179,4 @@ contract Groth16Verifier {
              return(0, 0x20)
          }
      }
-
-    function requireReceiverProof(
-            bytes memory _proof,
-            uint[3] memory input
-        ) public view {
-            uint256[8] memory p = abi.decode(_proof, (uint256[8]));
-            require(
-                verifyProof(
-                    [p[0], p[1]],
-                    [[p[2], p[3]], [p[4], p[5]]],
-                    [p[6], p[7]],
-                    input
-            ),
-            "Invalid receiver (ZK)"
-            );
-    }
  }

@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Send Verifier Interface for Solidity v0.9.9069 (circuits/ISendVerifier.sol)
+ Send Verifier Interface for Solidity v0.9.9969 (circuits/ISendVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -23,8 +23,4 @@ interface SendVerifier {
             uint[7] memory input
         ) external view returns (bool r);
 
-    // function requireSenderProof(
-    //         bytes memory _proof,
-    //         uint[7] memory input
-    //     ) external view;
 }

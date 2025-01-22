@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Vault Utils for Solidity v0.9.9069 (Vault.sol)
+ Vault Utils for Solidity v0.9.9969 (Vault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -106,7 +106,6 @@ struct CheckDeposit {
     
     bytes proof_sender;
     uint[3] input_sender;
-    // PolicyProof policy_proof;
 }
 
 contract Vault {
@@ -134,15 +133,13 @@ contract Vault {
         require((cd.obligor == address(0) ? PoseidonT2.hash([cd.amount]) == cd.input_sender[2] : cd.amount == uint256(0)),"Incorrect Amount");
         require(cd.hashBalance == 0 ? cd.input_sender[2] == cd.input_sender[1] : cd.hashBalance == cd.input_sender[0],"Balances don't match");
 
-        ReceiveVerifier(receiveVerifier).requireReceiverProof(cd.proof_sender, cd.input_sender);
-
-        // if(cd.obligor == address(0)){
-        //     require(cd.amount <= IERC20(cd.denomination).allowance(cd.payer_address, cd.vault_address), "Not Enough Allowance");
-        //     IERC20(cd.denomination).transferFrom(cd.payer_address, cd.vault_address, cd.amount);
-        // }
-        // else
-        //     ConfidentialAccessControl(accessControl).usePolicyMeta(cd.denomination, cd.policy_proof);
-
+        uint256[8] memory p = abi.decode(cd.proof_sender, (uint256[8]));
+        ReceiveVerifier(receiveVerifier).verifyProof(
+            [p[0], p[1]],
+            [[p[2], p[3]], [p[4], p[5]]],
+            [p[6], p[7]],
+            [cd.input_sender[0], cd.input_sender[1], cd.input_sender[2]]
+        );
     }
 
     function checkWithdraw(
@@ -158,7 +155,6 @@ contract Vault {
             [p[6], p[7]],
             [ck.input_sender[0], ck.input_sender[1], ck.input_sender[2], ck.input_sender[3], ck.input_sender[4], ck.input_sender[5], ck.input_sender[6]]
         );
-        // SendVerifier(sendVerifier).requireSenderProof(ck.proof_sender, ck.input_sender);
 
         require(PoseidonT2.hash([ck.amount]) == ck.input_sender[2], "incorrect amount");
         require(ck.input_sender[3] == ck.sendNonce, "Nonce don't match");
@@ -182,7 +178,6 @@ contract Vault {
             [p[6], p[7]],
             [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5], proof.input[6]]
         );
-        // SendVerifier(sendVerifier).requireSenderProof(proof.proof, proof.input);
 
         require(proof.input[3] == sendNonce, "Nonce don't match");
         require(balance == proof.input[0], "initial balances don't match");
@@ -203,7 +198,13 @@ contract Vault {
         uint256 amount_hash = sr.amount_hash;
         uint256 deal_id = sr.deal_id;
 
-        ReceiveVerifier(receiveVerifier).requireReceiverProof(proof, input);
+        uint256[8] memory p = abi.decode(proof, (uint256[8]));
+        ReceiveVerifier(receiveVerifier).verifyProof(
+            [p[0], p[1]],
+            [[p[2], p[3]], [p[4], p[5]]],
+            [p[6], p[7]],
+            [input[0], input[1], input[2]]
+        );
 
         require(sr.active, "Transfer request is not active");
         require(hashBalance == 0 ? (input[2] == input[1]) : (hashBalance == input[0]), "Initial amounts don't match");

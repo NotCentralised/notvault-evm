@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Receive Verifier Interface for Solidity v0.9.9069 (circuits/IReceiveVerifier.sol)
+ Receive Verifier Interface for Solidity v0.9.9969 (circuits/IReceiveVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -22,9 +22,4 @@ interface ReceiveVerifier {
             uint[2] memory c,
             uint[3] memory input
         ) external view returns (bool r);
-
-    function requireReceiverProof(
-            bytes memory _proof,
-            uint[3] memory input
-        ) external view;
 }
