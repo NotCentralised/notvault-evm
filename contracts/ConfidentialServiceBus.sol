@@ -45,7 +45,7 @@ contract ConfidentialServiceBus {
 
     function setValue(
             bytes calldata proof,
-            uint[2] memory input
+            uint[3] memory input
         )
         public
         {
@@ -55,7 +55,7 @@ contract ConfidentialServiceBus {
     function setValueMeta(
             address caller,
             bytes calldata proof,
-            uint[2] memory input
+            uint[3] memory input
         )
         public
         {
@@ -68,7 +68,7 @@ contract ConfidentialServiceBus {
 
     function requireProof(
             bytes memory _proof,
-            uint[2] memory input
+            uint[3] memory input
         ) internal view {
             uint256[8] memory p = abi.decode(_proof, (uint256[8]));
             require(

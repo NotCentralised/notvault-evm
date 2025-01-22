@@ -35,7 +35,7 @@ contract ConfidentialTreasury is ERC20, ReentrancyGuard {
     /*
         Add the secret
     */
-    function addSecretMeta(address caller, bytes calldata proof, uint[2] memory input) public nonReentrant {
+    function addSecretMeta(address caller, bytes calldata proof, uint[3] memory input) public nonReentrant {
         address sender       = address(this) == msg.sender ? caller : msg.sender;
         require(owner == sender, "only owner can add secret");
 
@@ -46,7 +46,6 @@ contract ConfidentialTreasury is ERC20, ReentrancyGuard {
         Add a policy
     */
     function addPolicyMeta(address caller, uint256 policy_id, Policy memory policy) public nonReentrant {
-
         address sender       = address(this) == msg.sender ? caller : msg.sender;
         require(owner == sender, "only owner can add policy");
 

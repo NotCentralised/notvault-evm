@@ -26,6 +26,24 @@ export const textToBigInt = (text: string): bigint => {
   return BigInt(result);
 }
 
+export const strToFeltArr = (str: string): BigInt[] => {
+  const size = Math.ceil(str.length / 31);
+  const arr = Array(size);
+
+  let offset = 0;
+  for (let i = 0; i < size; i++) {
+      const substr = str.substring(offset, offset + 31).split("");
+      const ss = substr.reduce(
+          (memo, c) => memo + c.charCodeAt(0).toString(16),
+          ""
+      );
+      arr[i] = BigInt("0x" + ss);
+      offset += 31;
+  }
+  // return arr;
+  return arr.length >= 2 ? [arr[0], arr[1]] : [arr[0], arr[0]]
+}
+
 export const encryptedBySecret = (data: any, secret: string) => CryptoJS.AES.encrypt(JSON.stringify(data), secret).toString();
 
 export const decryptBySecret = (data: any, secret: string) =>  JSON.parse(CryptoJS.AES.decrypt(data , secret).toString(CryptoJS.enc.Utf8));

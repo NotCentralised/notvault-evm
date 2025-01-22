@@ -20,18 +20,27 @@ include "../../node_modules/circomlib/circuits/poseidon.circom";
 template HashApprover () {  
 
     // Declaration of signals.  
-    signal input key;
-    signal input value;
-    signal output hash;
-    signal output keyOut;
+    signal input    key;
+    signal input    value;
+    signal input    salt[2];
+
+    signal output   hash;
+    signal output   keyOut;
+    signal output   hash_salt;
 
     component hasher = Poseidon(2);
     hasher.inputs[0] <== key;
     hasher.inputs[1] <== value;
     hash <== hasher.out;
 
-    keyOut <== key;
+    component hasher_salt = Poseidon(4);
+    hasher_salt.inputs[0] <== key;
+    hasher_salt.inputs[1] <== value;
+    hasher_salt.inputs[2] <== salt[0];
+    hasher_salt.inputs[3] <== salt[1];
+    hash_salt <== hasher_salt.out;
 
+    keyOut <== key;
 }
 
 component main = HashApprover();

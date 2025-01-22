@@ -223,10 +223,24 @@ contract ConfidentialGroup is ReentrancyGuard {
                 if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
 
                     if(keccak256(abi.encodePacked(po[i].policy_type)) == keccak256(abi.encodePacked("transfer"))){
-                        PolicyVerifier(policyVerifier).requirePolicyProof(po[i].proof, [po[i].input[0], po[i].input[1]]);
+                        uint256[8] memory p = abi.decode(po[i].proof, (uint256[8]));
+                        PolicyVerifier(policyVerifier).verifyProof(
+                            [p[0], p[1]],
+                            [[p[2], p[3]], [p[4], p[5]]],
+                            [p[6], p[7]],
+                            [po[i].input[0], po[i].input[1]]
+                        );
+
+                        // PolicyVerifier(policyVerifier).requirePolicyProof(po[i].proof, [po[i].input[0], po[i].input[1]]);
                     }
                     else{
-                        AlphaNumericalDataVerifier(dataVerifier).requireDataProof(po[i].proof, [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
+                        uint256[8] memory p = abi.decode(po[i].proof, (uint256[8]));
+                        AlphaNumericalDataVerifier(dataVerifier).verifyProof(
+                            [p[0], p[1]],
+                            [[p[2], p[3]], [p[4], p[5]]],
+                            [p[6], p[7]],
+                            [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
+                        // AlphaNumericalDataVerifier(dataVerifier).requireDataProof(po[i].proof, [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
                     }
                     
                     for(uint j = 0; j < po[i].signatures.length; j++){

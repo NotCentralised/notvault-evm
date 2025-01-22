@@ -112,7 +112,7 @@ contract ConfidentialAccessControl is ReentrancyGuard {
     /*
         Add the treasurer secret
     */
-    function addSecret(address caller, bytes calldata proof, uint[2] memory input) public nonReentrant {
+    function addSecret(address caller, bytes calldata proof, uint[3] memory input) public nonReentrant {
         address sender       = address(this) == msg.sender ? caller : msg.sender;
 
         requireProof(proof, input);
@@ -122,6 +122,8 @@ contract ConfidentialAccessControl is ReentrancyGuard {
     mapping(address => mapping (uint256 => Policy)) policies;
     mapping(address => mapping (uint256 => uint256)) policyIndex;
     mapping(address => uint256) policyNonce;
+
+    mapping(uint256 => bool) usedPolicies;
 
     /*
         Add a policy
@@ -149,18 +151,35 @@ contract ConfidentialAccessControl is ReentrancyGuard {
     ) 
     public nonReentrant
     {
+        require(!usedPolicies[proof.input[2]], "policy already used");
+
         if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("secret"))){
-            requireProof(proof.proof, [proof.input[0], proof.input[1]]);
+            requireProof(proof.proof, [proof.input[0], proof.input[1], proof.input[2]]);
 
             require(secrets[owner][proof.input[1]] > 0, "no secret registered");
             require(secrets[owner][proof.input[1]] == proof.input[0], "secret's don't match");
+            usedPolicies[proof.input[2]] = true;
             return;
         }
-        else if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("transfer")))
-            PolicyVerifier(policyVerifier).requirePolicyProof(proof.proof, [proof.input[0], proof.input[1]]);
+        else if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("transfer"))){
+            uint256[8] memory p = abi.decode(proof.proof, (uint256[8]));
+            PolicyVerifier(policyVerifier).verifyProof(
+                [p[0], p[1]],
+                [[p[2], p[3]], [p[4], p[5]]],
+                [p[6], p[7]], 
+                [proof.input[0], proof.input[1]]);
+            // PolicyVerifier(policyVerifier).requirePolicyProof(proof.proof, [proof.input[0], proof.input[1]]);
+        }
         
-        else
-            AlphaNumericalDataVerifier(dataVerifier).requireDataProof(proof.proof, [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
+        else {
+            uint256[8] memory p = abi.decode(proof.proof, (uint256[8]));
+            AlphaNumericalDataVerifier(dataVerifier).verifyProof(
+                [p[0], p[1]],
+                [[p[2], p[3]], [p[4], p[5]]],
+                [p[6], p[7]], 
+                [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
+            // AlphaNumericalDataVerifier(dataVerifier).requireDataProof(proof.proof, [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5]]);
+        }
         
 
         uint8 call_counter = 0;
@@ -198,7 +217,9 @@ contract ConfidentialAccessControl is ReentrancyGuard {
             policies[owner][proof.input[0]] = policy;
         }
         require(call_counter >= policy.minSignatories, "not enough signatories");
-        require(areAddressesUnique(_callers), "callers must be unique");       
+        require(areAddressesUnique(_callers), "callers must be unique");
+
+        usedPolicies[proof.input[2]] = true;
     }
 
     function areAddressesUnique(address[] memory arr) public pure returns (bool) {
@@ -226,18 +247,18 @@ contract ConfidentialAccessControl is ReentrancyGuard {
     }
 
     function requireProof(
-            bytes memory _proof,
-            uint[2] memory input
-        ) internal view {
-            uint256[8] memory p = abi.decode(_proof, (uint256[8]));
-            require(
-                ApproverVerifier(hashVerifier).verifyProof(
-                    [p[0], p[1]],
-                    [[p[2], p[3]], [p[4], p[5]]],
-                    [p[6], p[7]],
-                    input
+        bytes memory _proof,
+        uint[3] memory input
+    ) internal view {
+        uint256[8] memory p = abi.decode(_proof, (uint256[8]));
+        require(
+            ApproverVerifier(hashVerifier).verifyProof(
+                [p[0], p[1]],
+                [[p[2], p[3]], [p[4], p[5]]],
+                [p[6], p[7]],
+                input
             ),
             "Invalid approver (ZK)"
-            );
+        );
     }
 }

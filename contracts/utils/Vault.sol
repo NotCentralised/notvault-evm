@@ -151,7 +151,14 @@ contract Vault {
 
         ck.input_sender[3] = ck.sendNonce;
         
-        SendVerifier(sendVerifier).requireSenderProof(ck.proof_sender, ck.input_sender);
+        uint256[8] memory p = abi.decode(ck.proof_sender, (uint256[8]));
+        SendVerifier(sendVerifier).verifyProof(
+            [p[0], p[1]],
+            [[p[2], p[3]], [p[4], p[5]]],
+            [p[6], p[7]],
+            [ck.input_sender[0], ck.input_sender[1], ck.input_sender[2], ck.input_sender[3], ck.input_sender[4], ck.input_sender[5], ck.input_sender[6]]
+        );
+        // SendVerifier(sendVerifier).requireSenderProof(ck.proof_sender, ck.input_sender);
 
         require(PoseidonT2.hash([ck.amount]) == ck.input_sender[2], "incorrect amount");
         require(ck.input_sender[3] == ck.sendNonce, "Nonce don't match");
@@ -168,7 +175,14 @@ contract Vault {
         Payment memory payment, 
         uint256 length
     ) public view {
-        SendVerifier(sendVerifier).requireSenderProof(proof.proof, proof.input);
+        uint256[8] memory p = abi.decode(proof.proof, (uint256[8]));
+        SendVerifier(sendVerifier).verifyProof(
+            [p[0], p[1]],
+            [[p[2], p[3]], [p[4], p[5]]],
+            [p[6], p[7]],
+            [proof.input[0], proof.input[1], proof.input[2], proof.input[3], proof.input[4], proof.input[5], proof.input[6]]
+        );
+        // SendVerifier(sendVerifier).requireSenderProof(proof.proof, proof.input);
 
         require(proof.input[3] == sendNonce, "Nonce don't match");
         require(balance == proof.input[0], "initial balances don't match");

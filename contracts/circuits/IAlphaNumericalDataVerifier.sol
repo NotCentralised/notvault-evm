@@ -20,11 +20,11 @@ interface AlphaNumericalDataVerifier {
             uint[2] memory a,
             uint[2][2] memory b,
             uint[2] memory c,
-            uint[4] memory input
+            uint[6] memory input
         ) external view returns (bool r);
 
-    function requireDataProof(
-            bytes memory _proof,
-            uint[6] memory input
-        ) external view;
+    // function requireDataProof(
+    //         bytes memory _proof,
+    //         uint[6] memory input
+    //     ) external view;
 }

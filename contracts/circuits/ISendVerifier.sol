@@ -23,8 +23,8 @@ interface SendVerifier {
             uint[7] memory input
         ) external view returns (bool r);
 
-    function requireSenderProof(
-            bytes memory _proof,
-            uint[7] memory input
-        ) external view;
+    // function requireSenderProof(
+    //         bytes memory _proof,
+    //         uint[7] memory input
+    //     ) external view;
 }

@@ -58,7 +58,7 @@ contract ConfidentialOracle is ReentrancyGuard {
     function setValueMeta(
             address caller,
             bytes calldata proof,
-            uint[2] memory input
+            uint[3] memory input
         )
         public nonReentrant
         {
@@ -71,7 +71,7 @@ contract ConfidentialOracle is ReentrancyGuard {
 
     function requireProof(
             bytes memory _proof,
-            uint[2] memory input
+            uint[3] memory input
         ) internal view {
             uint256[8] memory p = abi.decode(_proof, (uint256[8]));
             require(

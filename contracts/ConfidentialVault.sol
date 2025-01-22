@@ -315,6 +315,7 @@ contract ConfidentialVault is ReentrancyGuard {
         _hashBalances[checkAddress][sr.deal_group_id][denomination][sr.obligor] = input[1];
     }
 
+    // AlphaNumericalDataVerifier.sol
     // function requireDataProof(
     //     bytes memory _proof,
     //     uint[6] memory input
@@ -331,9 +332,10 @@ contract ConfidentialVault is ReentrancyGuard {
     //     );
     // }
 
+    // HashApproverVerifier.sol
     // function requirePolicyProof(
     //     bytes memory _proof,
-    //     uint[2] memory input
+    //     uint[3] memory input
     // ) public view {
     //     uint256[8] memory p = abi.decode(_proof, (uint256[8]));
     //     require(
@@ -347,6 +349,7 @@ contract ConfidentialVault is ReentrancyGuard {
     //     );
     // }
 
+    // HashSenderVerifier.sol
     // function requireSenderProof(
     //         bytes memory _proof,
     //         uint[7] memory input
@@ -363,6 +366,7 @@ contract ConfidentialVault is ReentrancyGuard {
     //         );
     // }
 
+    // HashReceiverVerifier.sol
     // function requireReceiverProof(
     //         bytes memory _proof,
     //         uint[3] memory input
@@ -379,6 +383,7 @@ contract ConfidentialVault is ReentrancyGuard {
     //         );
     // }
 
+    // HashPaymentSignatureVerifier.sol
     // function requireSignatureProof(
     //         bytes memory _proof,
     //         uint[2] memory input

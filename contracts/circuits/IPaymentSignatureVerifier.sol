@@ -23,8 +23,8 @@ interface PaymentSignatureVerifier {
             uint[2] memory input
         ) external view returns (bool r);
 
-    function requireSignatureProof(
-            bytes memory _proof,
-            uint[2] memory input
-        ) external view;
+    // function requireSignatureProof(
+    //         bytes memory _proof,
+    //         uint[2] memory input
+    //     ) external view;
 }
