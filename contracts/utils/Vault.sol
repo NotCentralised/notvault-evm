@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Vault Utils for Solidity v0.9.2069 (Vault.sol)
+ Vault Utils for Solidity v0.9.9069 (Vault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -27,6 +27,7 @@ import "../circuits/IReceiveVerifier.sol";
 import "../circuits/ISendVerifier.sol";
 
 struct CreateRequestMessage{
+    uint256 index;
     address oracle_address;
     address oracle_owner;
 
@@ -105,7 +106,7 @@ struct CheckDeposit {
     
     bytes proof_sender;
     uint[3] input_sender;
-    PolicyProof policy_proof;
+    // PolicyProof policy_proof;
 }
 
 contract Vault {
@@ -129,18 +130,18 @@ contract Vault {
 
     function checkDeposit(
         CheckDeposit memory cd
-    ) public {
+    ) public view {
         require((cd.obligor == address(0) ? PoseidonT2.hash([cd.amount]) == cd.input_sender[2] : cd.amount == uint256(0)),"Incorrect Amount");
         require(cd.hashBalance == 0 ? cd.input_sender[2] == cd.input_sender[1] : cd.hashBalance == cd.input_sender[0],"Balances don't match");
 
         ReceiveVerifier(receiveVerifier).requireReceiverProof(cd.proof_sender, cd.input_sender);
 
-        if(cd.obligor == address(0)){
-            require(cd.amount <= IERC20(cd.denomination).allowance(cd.payer_address, cd.vault_address), "Not Enough Allowance");
-            IERC20(cd.denomination).transferFrom(cd.payer_address, cd.vault_address, cd.amount);
-        }
-        else
-            ConfidentialAccessControl(accessControl).usePolicyMeta(cd.denomination, cd.policy_proof);
+        // if(cd.obligor == address(0)){
+        //     require(cd.amount <= IERC20(cd.denomination).allowance(cd.payer_address, cd.vault_address), "Not Enough Allowance");
+        //     IERC20(cd.denomination).transferFrom(cd.payer_address, cd.vault_address, cd.amount);
+        // }
+        // else
+        //     ConfidentialAccessControl(accessControl).usePolicyMeta(cd.denomination, cd.policy_proof);
 
     }
 

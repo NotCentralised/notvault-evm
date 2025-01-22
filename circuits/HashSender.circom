@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Hash Sender Circuit v0.9.2069 (HashSender.circom)
+ Hash Sender Circuit v0.9.9069 (HashSender.circom)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -72,7 +72,7 @@ template HashSender () {
     hashId.inputs[6] <== deal_id;
     idHash <== hashId.out;
 
-    // hash of the amunt being sent
+    // hash of the amount being sent
     component hashAmount = Poseidon(1);
     hashAmount.inputs[0] <== amount;
     amountHash <== hashAmount.out;

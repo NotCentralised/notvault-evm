@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Group Contract for Solidity v0.9.2069 (ConfidentialGroup.sol)
+ Group Contract for Solidity v0.9.9069 (ConfidentialGroup.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -26,6 +26,11 @@ import "./circuits/IAlphaNumericalDataVerifier.sol";
 
 import "./utils/Vault.sol";
 
+struct Member {
+    address     deal_address;
+    uint256     deal_id;
+}
+
 struct Policy {
     string      policy_type;
     uint32      start;
@@ -33,7 +38,8 @@ struct Policy {
     uint32      counter;
     uint32      maxUse;
 
-    address[]   callers;
+    address[]   callers_address;
+    uint256[]   callers_id;
     uint8       minSignatories;
 }
 
@@ -86,8 +92,7 @@ contract ConfidentialGroup is ReentrancyGuard {
         _tokenIdCounter.increment();
     }
 
-    mapping (uint256 => mapping (uint256 => address)) members;
-    mapping (uint256 => mapping (uint256 => uint256)) membersId;
+    mapping (uint256 => mapping (uint256 => Member)) members;
     mapping (uint256 => uint256) membersNonce;
 
     mapping (uint256 => mapping (uint256 => Policy)) policies;
@@ -129,10 +134,9 @@ contract ConfidentialGroup is ReentrancyGuard {
         The list of members and the list of ids must contain the same number of elements because each member is linked to an id.
         If an id is larger then 0, the membership of the group is linked to the owner of an Deal NFT identified by the id.
     */
-    function registerGroupMeta(address caller, address[] memory _members, uint256[] memory _ids) public nonReentrant returns (uint256) {
+    // function registerGroupMeta(address caller, address[] memory _members, uint256[] memory _ids) public nonReentrant returns (uint256) {
+    function registerGroupMeta(address caller, Member[] memory _members) public nonReentrant returns (uint256) {
         address sender  = accessControl == msg.sender ? caller : msg.sender;
-
-        require(_members.length == _ids.length, "owner and id length must be the same");
 
         uint256 group_id = _tokenIdCounter.current();
         _tokenIdCounter.increment();
@@ -140,7 +144,6 @@ contract ConfidentialGroup is ReentrancyGuard {
 
         for(uint i = 0; i < _members.length; i++){
             members[group_id][i] = _members[i];
-            membersId[group_id][i] = _ids[i];
         }
 
         membersNonce[group_id] = _members.length;
@@ -192,77 +195,85 @@ contract ConfidentialGroup is ReentrancyGuard {
         Prior to creating a send request through the vault, this function checks if the required policies are honoured.
     */
     function createRequestMeta(
-            address caller,
-            uint256 group_id,
-            address vault,
+        address caller,
+        uint256 group_id,
+        address vault,
 
-            CreateRequestMessage[] memory cr,
-            SendProof memory proof,
-            PolicyProof[] memory po,
-            Payment memory payment,
-            bool agree
-        ) 
-        public nonReentrant
-        {
-            address sender  = accessControl == msg.sender ? caller : msg.sender;
+        CreateRequestMessage[] memory cr,
+        SendProof memory proof,
+        PolicyProof[] memory po,
+        Payment memory payment,
+        bool agree
+    ) 
+    public nonReentrant
+    {
+        address sender  = accessControl == msg.sender ? caller : msg.sender;
 
-            require(hasAccess(sender, group_id), "caller has no access to group");
-            if(sender != owners[group_id]){
-                require(po.length > 0, "need policies");
+        require(hasAccess(sender, group_id), "caller has no access to group");
+
+        if(sender != owners[group_id]){
+            require(po.length > 0, "need policies");
+            
+            uint8 call_counter_policy = 0;
+
+            for(uint i = 0; i < po.length; i++){
+                require(po[i].input[1] == proof.input[2], "amounts don't match");
+                Policy memory policy = policies[group_id][po[i].input[0]];
                 
-                uint8 call_counter_policy = 0;
+                if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
 
-                for(uint i = 0; i < po.length; i++){
-                    require(po[i].input[1] == proof.input[2], "amounts don't match");
-                    Policy memory policy = policies[group_id][po[i].input[0]];
+                    if(keccak256(abi.encodePacked(po[i].policy_type)) == keccak256(abi.encodePacked("transfer"))){
+                        PolicyVerifier(policyVerifier).requirePolicyProof(po[i].proof, [po[i].input[0], po[i].input[1]]);
+                    }
+                    else{
+                        AlphaNumericalDataVerifier(dataVerifier).requireDataProof(po[i].proof, [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
+                    }
                     
-                    if(block.timestamp <= policy.expiry && block.timestamp >= policy.start && policy.counter <= policy.maxUse){
-
-                        if(keccak256(abi.encodePacked(po[i].policy_type)) == keccak256(abi.encodePacked("transfer"))){
-                            PolicyVerifier(policyVerifier).requirePolicyProof(po[i].proof, [po[i].input[0], po[i].input[1]]);
-                        }
-                        else{
-                            AlphaNumericalDataVerifier(dataVerifier).requireDataProof(po[i].proof, [po[i].input[0], po[i].input[1], po[i].input[2], po[i].input[3], po[i].input[4], po[i].input[5]]);
-                        }
+                    for(uint j = 0; j < po[i].signatures.length; j++){
                         
-                        for(uint j = 0; j < po[i].signatures.length; j++){
-                            
-                            address signer = getSigner(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked((po[i].proof))))), po[i].signatures[j]);
-    
-                            for(uint k = 0; k < policy.callers.length; k++){
-                                if(signer == policy.callers[k]){
+                        address signer = getSigner(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked((po[i].proof))))), po[i].signatures[j]);
+
+                        for(uint k = 0; k < policy.callers_address.length; k++){
+                            if(policy.callers_id[k] == 0){
+                                if(signer == policy.callers_address[k]){
+                                    call_counter_policy++;
+                                }
+                            }
+                            else{
+                                if(signer == IERC721(policy.callers_address[k]).ownerOf(policy.callers_id[k])){
                                     call_counter_policy++;
                                 }
                             }
                         }
-                        
-                        policy.counter++;
-                        policies[group_id][po[i].input[0]] = policy;
                     }
-                    require(call_counter_policy >= policy.minSignatories, "not enough signatories");
+                    
+                    policy.counter++;
+                    policies[group_id][po[i].input[0]] = policy;
                 }
+                require(call_counter_policy >= policy.minSignatories && policy.minSignatories > 0, "not enough signatories");
             }
+        }
 
-            ConfidentialVault(vault).createRequestMeta(groupWallets[group_id], group_id, cr, proof, payment, agree);
+        ConfidentialVault(vault).createRequestMeta(groupWallets[group_id], group_id, cr, proof, payment, agree);
     }
 
     /*
         Accept a send request of the vault on behalf of the group.
     */
     function acceptRequestMeta(
-            address caller,
-            uint256 group_id,
-            address vault,
-            uint256 idHash,
-            bytes calldata proof,
-            uint[3] memory input
-        )
-        public nonReentrant
-        {
-            address sender  = accessControl == msg.sender ? caller : msg.sender;
-            require(hasAccess(sender, group_id), "caller has no access to group");
-            
-            ConfidentialVault(vault).acceptRequestMeta(groupWallets[group_id], idHash, proof, input);
+        address caller,
+        uint256 group_id,
+        address vault,
+        uint256 idHash,
+        bytes calldata proof,
+        uint[3] memory input
+    )
+    public nonReentrant
+    {
+        address sender  = accessControl == msg.sender ? caller : msg.sender;
+        require(hasAccess(sender, group_id), "caller has no access to group");
+        
+        ConfidentialVault(vault).acceptRequestMeta(groupWallets[group_id], idHash, proof, input);
     }
 
     function hasAccess(address sender, uint256 group_id) internal view returns (bool){
@@ -272,12 +283,11 @@ contract ConfidentialGroup is ReentrancyGuard {
         bool has_access = false;
         for(uint i = 0; i < membersNonce[group_id]; i++){
             if(!has_access){
-                uint256 id = membersId[group_id][i];
-                if(id > 0){
-                    has_access = IERC721(members[group_id][i]).ownerOf(id) == sender;
+                if(members[group_id][i].deal_id > 0){
+                    has_access = IERC721(members[group_id][i].deal_address).ownerOf(members[group_id][i].deal_id) == sender;
                 }
                 else{
-                    has_access = members[group_id][i] == sender;
+                    has_access = members[group_id][i].deal_address == sender;
                 }                
             }
         }

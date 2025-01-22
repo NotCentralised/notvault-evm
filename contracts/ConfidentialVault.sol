@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Vault Contract for Solidity v0.9.2069 (ConfidentialVault.sol)
+ Confidential Vault Contract for Solidity v0.9.9069 (ConfidentialVault.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -129,10 +129,16 @@ contract ConfidentialVault is ReentrancyGuard {
                 obligor,
                 
                 proof_sender,
-                input_sender,
-                policy_proof
+                input_sender
             )
         );
+
+        if(obligor == address(0)){
+            require(amount <= IERC20(denomination).allowance(payer_address, contract_address), "Not Enough Allowance");
+            IERC20(denomination).transferFrom(payer_address, contract_address, amount);
+        }
+        else
+            ConfidentialAccessControl(accessControl).usePolicyMeta(denomination, policy_proof);
 
         _hashBalances[payer_address][group_id][denomination][obligor] = input_sender[1];
     }
@@ -236,7 +242,7 @@ contract ConfidentialVault is ReentrancyGuard {
 
         for(uint i = 0; i < cr.length; i++){
 
-            uint256 idHash = Vault(vaultUtilsAddress).getHash(cr[i], proof, i);
+            uint256 idHash = Vault(vaultUtilsAddress).getHash(cr[i], proof, cr[i].index);
 
             sendPool[idHash] = SendRequest(
                 idHash, sender, group_id,

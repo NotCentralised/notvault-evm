@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Confidential Wallet for Solidity v0.9.2069 (ConfidentialWallet.sol)
+ Confidential Wallet for Solidity v0.9.9069 (ConfidentialWallet.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -21,8 +21,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./circuits/IReceiveVerifier.sol";
 import "./circuits/ISendVerifier.sol";
 import "./ConfidentialVault.sol";
-
-import "hardhat/console.sol";
 
 contract ConfidentialWallet is ReentrancyGuard {
     mapping (address => string)                     publicKeys;
@@ -154,11 +152,6 @@ contract ConfidentialWallet is ReentrancyGuard {
     returns (
         string memory
     ){  
-        console.log('vault: ', vault);
-        console.log('account: ', account);
-        console.log('group_id: ', group_id);
-        console.log('denomination: ', denomination);
-        console.log('obligor: ', obligor);
         return privateBalances[vault][account][group_id][denomination][obligor]; 
     }
 
@@ -173,12 +166,6 @@ contract ConfidentialWallet is ReentrancyGuard {
     public nonReentrant
     {  
         address sender = msg.sender == accessControl ? caller : msg.sender;
-
-        console.log('vault: ', vault);
-        console.log('account: ', sender);
-        console.log('group_id: ', group_id);
-        console.log('denomination: ', denomination);
-        console.log('obligor: ', obligor);
         
         privateBalances[vault][sender][group_id][denomination][obligor] = value;
     }

@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Access Control Contract for Solidity v0.9.2069 (ConfidentialAccessControl.sol)
+ Access Control Contract for Solidity v0.9.9069 (ConfidentialAccessControl.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
@@ -21,8 +21,6 @@ import "./ConfidentialVault.sol";
 import "./ConfidentialGroup.sol";
 import "./ConfidentialWallet.sol";
 import "./circuits/IApproverVerifier.sol";
-
-import "hardhat/console.sol";
 
 struct Meta {
     address userAddress;
@@ -66,7 +64,7 @@ contract ConfidentialAccessControl is ReentrancyGuard {
 
             (bool success, bytes memory result) = meta[i].contractAddress.call(meta[i].functionSignature);
             if (!success) {
-                console.log("META ERROR: %s",  meta[i].contractAddress);
+            
                 if (result.length > 0) {
                     assembly {
                         let returndata_size := mload(result)
@@ -109,7 +107,6 @@ contract ConfidentialAccessControl is ReentrancyGuard {
         }
     }
 
-    // mapping (address => address) private treasurers;
     mapping(address => mapping (uint256 => uint256)) private secrets;
 
     /*
@@ -133,8 +130,8 @@ contract ConfidentialAccessControl is ReentrancyGuard {
         
         address sender       = address(this) == msg.sender ? caller : msg.sender;
         require(policy.minSignatories >= 1, "at least one signatory");
-        require(areAddressesUnique(policy.callers), "callers must be unique");
-        require(policy.callers.length > 0, "must be atleast 1 caller");
+        require(areMembersUnique(policy.callers_address, policy.callers_id), "callers must be unique");
+        require(policy.callers_address.length > 0, "must be atleast 1 caller");
 
         policy.counter = 0;
 
@@ -155,6 +152,7 @@ contract ConfidentialAccessControl is ReentrancyGuard {
         if(keccak256(abi.encodePacked(proof.policy_type)) == keccak256(abi.encodePacked("secret"))){
             requireProof(proof.proof, [proof.input[0], proof.input[1]]);
 
+            require(secrets[owner][proof.input[1]] > 0, "no secret registered");
             require(secrets[owner][proof.input[1]] == proof.input[0], "secret's don't match");
             return;
         }
@@ -180,10 +178,16 @@ contract ConfidentialAccessControl is ReentrancyGuard {
 
                 _callers[j] = signer;
 
-                for(uint k = 0; k < policy.callers.length; k++){
-                    if(signer == policy.callers[k]){
-                        call_counter++;
-                        call_counter_policy++;
+                for(uint k = 0; k < policy.callers_address.length; k++){
+                    if(policy.callers_id[k] == 0){
+                        if(signer == policy.callers_address[k]){
+                            call_counter_policy++;
+                        }
+                    }
+                    else{
+                        if(signer == IERC721(policy.callers_address[k]).ownerOf(policy.callers_id[k])){
+                            call_counter_policy++;
+                        }
                     }
                 }
 
@@ -202,6 +206,18 @@ contract ConfidentialAccessControl is ReentrancyGuard {
         for (uint256 i = 0; i < length; i++) {
             for (uint256 j = i + 1; j < length; j++) {
                 if (arr[i] == arr[j]) {
+                    return false; // Duplicate address found
+                }
+            }
+        }
+        return true; // All addresses are unique
+    }
+
+    function areMembersUnique(address[] memory addresses, uint256[] memory ids) public pure returns (bool) {
+        uint256 length = addresses.length;
+        for (uint256 i = 0; i < length; i++) {
+            for (uint256 j = i + 1; j < length; j++) {
+                if (addresses[i] == addresses[j] && ids[i] == ids[j]) {
                     return false; // Duplicate address found
                 }
             }
