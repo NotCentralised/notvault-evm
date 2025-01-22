@@ -5,8 +5,6 @@ import * as EthCrypto from "eth-crypto";
 
 import * as metaEncryption from "@metamask/eth-sig-util";
 
-import axios from 'axios';
-
 const encrypt = async (pk_to: string, message: any) => {
   const payload = message;
   const encrypted = await EthCrypto.encryptWithPublicKey(pk_to, JSON.stringify(payload));
@@ -23,39 +21,39 @@ const main = async () => {
   const [owner, treasurer] = await ethers.getSigners();
   console.log('Deploying with: ', owner.address);
   
-  const HashSenderFactory = await ethers.getContractFactory("contracts/circuits/HashSenderVerifier.sol:Verifier");
+  const HashSenderFactory = await ethers.getContractFactory("contracts/circuits/HashSenderVerifier.sol:Groth16Verifier");
   const hashSenderContract = await HashSenderFactory.connect(owner).deploy();
   console.log('Deployed HashSenderVerifier: ', hashSenderContract.target);
 
-  const HashReceiverFactory = await ethers.getContractFactory("contracts/circuits/HashReceiverVerifier.sol:Verifier");
+  const HashReceiverFactory = await ethers.getContractFactory("contracts/circuits/HashReceiverVerifier.sol:Groth16Verifier");
   const hashReceiverContract = await HashReceiverFactory.connect(owner).deploy();
   console.log('Deployed HashReceiverVerifier: ', hashReceiverContract.target);
 
-  const HashApproverFactory = await ethers.getContractFactory("contracts/circuits/HashApproverVerifier.sol:Verifier");
+  const HashApproverFactory = await ethers.getContractFactory("contracts/circuits/HashApproverVerifier.sol:Groth16Verifier");
   const hashApproverContract = await HashApproverFactory.connect(owner).deploy();
   console.log('Deployed HashApproverVerifier: ', hashApproverContract.target);
 
-  const PaymentSignatureFactory = await ethers.getContractFactory("contracts/circuits/HashPaymentSignatureVerifier.sol:Verifier");
+  const PaymentSignatureFactory = await ethers.getContractFactory("contracts/circuits/HashPaymentSignatureVerifier.sol:Groth16Verifier");
   const paymentSignatureContract = await PaymentSignatureFactory.connect(owner).deploy();
   console.log('Deployed HashPaymentSignatureVerifier: ', paymentSignatureContract.target);
 
-  const AlphaNumericalFactory = await ethers.getContractFactory("contracts/circuits/AlphaNumericalDataVerifier.sol:Verifier");
+  const AlphaNumericalFactory = await ethers.getContractFactory("contracts/circuits/AlphaNumericalDataVerifier.sol:Groth16Verifier");
   const alphaNumericalContract = await AlphaNumericalFactory.connect(owner).deploy();
   console.log('Deployed AlphaNumericalVerifier: ', alphaNumericalContract.target);
 
-  const NumericalDataFactory = await ethers.getContractFactory("contracts/circuits/NumericalDataVerifier.sol:Verifier");
+  const NumericalDataFactory = await ethers.getContractFactory("contracts/circuits/NumericalDataVerifier.sol:Groth16Verifier");
   const numericalDataContract = await NumericalDataFactory.connect(owner).deploy();
   console.log('Deployed NumericalDataVerifier: ', numericalDataContract.target);
 
-  const TextDataFactory = await ethers.getContractFactory("contracts/circuits/TextDataVerifier.sol:Verifier");
+  const TextDataFactory = await ethers.getContractFactory("contracts/circuits/TextDataVerifier.sol:Groth16Verifier");
   const textDataContract = await TextDataFactory.connect(owner).deploy();
   console.log('Deployed TextDataVerifier: ', textDataContract.target);
 
-  const TextExpiryDataFactory = await ethers.getContractFactory("contracts/circuits/TextExpiryDataVerifier.sol:Verifier");
+  const TextExpiryDataFactory = await ethers.getContractFactory("contracts/circuits/TextExpiryDataVerifier.sol:Groth16Verifier");
   const textExpiryDataContract = await TextExpiryDataFactory.connect(owner).deploy();
   console.log('Deployed TextExpiryDataVerifier: ', textExpiryDataContract.target);
 
-  const PolicyFactory = await ethers.getContractFactory("contracts/circuits/PolicyVerifier.sol:Verifier");
+  const PolicyFactory = await ethers.getContractFactory("contracts/circuits/PolicyVerifier.sol:Groth16Verifier");
   const policyContract = await PolicyFactory.connect(owner).deploy();
   console.log('Deployed PolicyVerifier: ', policyContract.target);
 
@@ -87,7 +85,7 @@ const main = async () => {
   const walletContract = await WalletFactory.connect(owner).deploy(accessControl.target);
   console.log('Deployed WalletFactory:', walletContract.target);
 
-  const ownerPrivateKey = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+  const ownerPrivateKey = process.env.OWNER_PRIVATE_KEY ?? '';
   
   let ownerPublicKey = metaEncryption.getEncryptionPublicKey(ownerPrivateKey);
   console.log('Using public key: ', ownerPublicKey);
@@ -102,6 +100,7 @@ const main = async () => {
   console.log('Deployed VaultFactory: ', vaultContract.target);
   
   const dealContract = await DealFactory.connect(owner).deploy("ConfidentialDeal", "Deal", vaultContract.target, paymentSignatureContract.target, accessControl.target);
+
   console.log('Deployed DealFactory: ', dealContract.target);
   
   const oracleContract = await OracleFactory.connect(owner).deploy(hashApproverContract.target, accessControl.target);
@@ -110,29 +109,29 @@ const main = async () => {
   const serviceBusContract = await ServiceBusFactory.connect(owner).deploy(hashApproverContract.target, accessControl.target);
   console.log('Deployed ServiceBusFactory: ', serviceBusContract.target);
 
-  
-
   console.log('Deploying Treasury')
-  const decimals = 2n;
-  const total_supply_usdc = 1_000_000_000n;// * 10n ** 2n;
-  const total_supply_weth = 0n;// * 10n ** 2n;
-  const total_supply_wbtc = 0n;// * 10n ** 2n;
+  const decimals = 2;
+ 
+  const total_supply_weth = 0n;
+  const total_supply_wbtc = 0n;
   const TreasuryFactory = await ethers.getContractFactory("ConfidentialTreasury");
-  const usdcContract = await TreasuryFactory.connect(owner).deploy("Layer-C USDC", "LCUSDC", total_supply_usdc, decimals, accessControl.target);
-  const cashContract = await TreasuryFactory.connect(owner).deploy("Layer-C Cash", "LCC", total_supply_weth, decimals, accessControl.target);
-  const shadowContract = await TreasuryFactory.connect(owner).deploy("Layer-C Shadow", "LCS", total_supply_wbtc, decimals, accessControl.target);
-
   
-  const proof_usdc = await genApproverProof({key: usdcContract.target, value: textToBigInt("usdc"), salt: strToFeltArr('0') });
-  const proof_cash = await genApproverProof({key: cashContract.target, value: textToBigInt("cash"), salt: strToFeltArr('0') });
-  const proof_shadow = await genApproverProof({key: shadowContract.target, value: textToBigInt("shadow"), salt: strToFeltArr('0') });
+  const cashContract = await TreasuryFactory.connect(owner).deploy("Hutly Cash", "HUT", total_supply_weth, decimals, accessControl.target);
+  const shadowContract = await TreasuryFactory.connect(owner).deploy("Hutly Shadow", "sHUT", total_supply_wbtc, decimals, accessControl.target);
 
-  console.log('Adding USDC treasurer');
-  await usdcContract.connect(owner).addSecretMeta(owner.address, proof_usdc.solidityProof, proof_usdc.inputs);
-  console.log('Adding CASH treasurer');
-  await cashContract.connect(owner).addSecretMeta(owner.address, proof_cash.solidityProof, proof_cash.inputs);
-  console.log('Adding SHADOW treasurer');
-  await shadowContract.connect(owner).addSecretMeta(owner.address, proof_shadow.solidityProof, proof_shadow.inputs);
+  const hut_secret = process.env.HUT_SECRET ?? '';
+  const shut_secret = process.env.sHUT_SECRET ?? '';
+
+  const proof_cash = await genApproverProof({key: cashContract.target, value: textToBigInt(hut_secret), salt: strToFeltArr('0') });
+  const proof_shadow = await genApproverProof({key: shadowContract.target, value: textToBigInt(shut_secret), salt: strToFeltArr('0') });
+
+  console.log('Adding HUT treasurer');
+  const tx_cash_secret = await cashContract.connect(owner).addSecretMeta(owner.address, proof_cash.solidityProof, proof_cash.inputs, {gasLimit: 2747885 });
+  console.log("tx_cash_secret: ", tx_cash_secret);
+
+  console.log('Adding sHUT treasurer');
+  const tx_shadow_secret = await shadowContract.connect(owner).addSecretMeta(owner.address, proof_shadow.solidityProof, proof_shadow.inputs, {gasLimit: 2747885 });
+  console.log("tx_shadow_secret: ", tx_shadow_secret);
   
 
   console.log('Deployed Done')
@@ -145,9 +144,23 @@ const main = async () => {
   console.log("Oracle: ", oracleContract.target);
   console.log("Group: ", groupContract.target);
   console.log("ServiceBus: ", serviceBusContract.target);
-  console.log("USDC: ", usdcContract.target);
-  console.log("CASH: ", cashContract.target);
-  console.log("SHADOW: ", shadowContract.target);
+  console.log("HUT: ", cashContract.target);
+  console.log("sHUT: ", shadowContract.target);
+
+  console.log({
+    accessAddress:   accessControl.target,
+    walletAddress:   walletContract.target,
+    vaultAddress:    vaultContract.target,
+    dealAddress:     dealContract.target,
+    oracleAddress:   oracleContract.target,
+    groupAddress:    groupContract.target,
+    serviceAddress:  serviceBusContract.target
+  })
+
+  console.log({
+    'HUT':          cashContract.target,
+    'sHUT':         shadowContract.target
+  })
 }
 
 // We recommend this pattern to be able to use async/await everywhere
