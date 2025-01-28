@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Numerical Data Verifier Interface for Solidity v0.9.9969 (circuits/INumericalDataVerifier.sol)
+ Numerical Data Verifier Interface for Solidity v0.9.10069 (circuits/INumericalDataVerifier.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |

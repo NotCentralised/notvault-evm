@@ -1,6 +1,6 @@
 /* 
  SPDX-License-Identifier: MIT
- Group Contract for Solidity v0.9.9969 (ConfidentialGroup.sol)
+ Group Contract for Solidity v0.9.10069 (ConfidentialGroup.sol)
 
   _   _       _    _____           _             _ _              _ 
  | \ | |     | |  / ____|         | |           | (_)            | |
